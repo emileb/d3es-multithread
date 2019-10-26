@@ -543,6 +543,20 @@ void R_LinkLightSurf(const drawSurf_t** link, const srfTriangles_t* tri, const v
 	drawSurf = (drawSurf_t*) R_FrameAlloc(sizeof(*drawSurf));
 
 	drawSurf->geo = tri;
+		if (tri)
+    	{
+    		//Emile, very important!!! need to make a new copy of surface triangles for SMP
+    		//Otherwise frontend thread is still referencing same copy as backend. 2 days to debug!
+    		srfTriangles_t *newTri = (srfTriangles_t *)R_FrameAlloc(sizeof(*tri));
+    		memcpy(newTri,tri,sizeof(*tri));
+
+    		drawSurf->geo = newTri;
+    	}
+    	else
+    	{
+    		drawSurf->geo = tri;
+    	}
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
 	drawSurf->scissorRect = scissor;
@@ -1066,6 +1080,20 @@ void R_AddDrawSurf(const srfTriangles_t* tri, const viewEntity_t* space, const r
 
 	drawSurf = (drawSurf_t*) R_FrameAlloc(sizeof(*drawSurf));
 	drawSurf->geo = tri;
+		if (tri)
+        	{
+        		//Emile, very important!!! need to make a new copy of surface triangles for SMP
+        		//Otherwise frontend thread is still referencing same copy as backend. 2 days to debug!
+        		srfTriangles_t *newTri = (srfTriangles_t *)R_FrameAlloc(sizeof(*tri));
+        		memcpy(newTri,tri,sizeof(*tri));
+
+        		drawSurf->geo = newTri;
+        	}
+        	else
+        	{
+        		drawSurf->geo = tri;
+        	}
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
 	drawSurf->scissorRect = scissor;

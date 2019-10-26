@@ -39,6 +39,9 @@ class idScreenRect; // yay for include recursion
 #include "renderer/RenderSystem.h"
 #include "renderer/RenderWorld.h"
 
+
+#include "sys/platform.h"
+
 class idRenderWorldLocal;
 
 // everything that is needed by the backend needs
@@ -708,6 +711,13 @@ public:
 	void					Clear( void );
 	void					SetBackEndRenderer();			// sets tr.backEndRenderer based on cvars
 	void					RenderViewToViewport( const renderView_t *renderView, idScreenRect *viewport );
+
+	xthreadInfo				renderThread;
+    bool					renderThread_exit;
+
+	void BackendThread();
+
+	void BackendThreadRun();
 
 public:
 	// renderer globals

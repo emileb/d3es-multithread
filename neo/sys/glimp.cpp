@@ -372,6 +372,7 @@ GLimp_ActivateContext
 */
 void GLimp_ActivateContext() {
 	common->DPrintf("TODO: GLimp_ActivateContext\n");
+	SDL_GL_MakeCurrent(window, context);
 }
 
 /*
@@ -381,6 +382,7 @@ GLimp_DeactivateContext
 */
 void GLimp_DeactivateContext() {
 	common->DPrintf("TODO: GLimp_DeactivateContext\n");
+	SDL_GL_MakeCurrent(window, NULL);
 }
 
 /*

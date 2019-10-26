@@ -2472,6 +2472,7 @@ void idSessionLocal::Draw() {
 	}
 }
 
+
 /*
 ===============
 idSessionLocal::UpdateScreen
@@ -2500,18 +2501,18 @@ void idSessionLocal::UpdateScreen( bool outOfSequence ) {
 	if ( outOfSequence ) {
 		Sys_GrabMouseCursor( false );
 	}
-
+LOGI("FRONT START");
 	renderSystem->BeginFrame( renderSystem->GetScreenWidth(), renderSystem->GetScreenHeight() );
 
 	// draw everything
 	Draw();
-
+LOGI("FRONT END");
 	if ( com_speeds.GetBool() ) {
 		renderSystem->EndFrame( &time_frontend, &time_backend );
 	} else {
 		renderSystem->EndFrame( NULL, NULL );
 	}
-
+LOGI("BACK END");
 	insideUpdateScreen = false;
 }
 

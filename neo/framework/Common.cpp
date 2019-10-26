@@ -1484,6 +1484,7 @@ void Com_ExecMachineSpec_f( const idCmdArgs &args ) {
 	cvarSystem->SetCVarBool( "g_doubleVision", true, CVAR_ARCHIVE );
 	cvarSystem->SetCVarBool( "g_muzzleFlash", true, CVAR_ARCHIVE );
 
+cvarSystem->SetCVarInteger( "image_preload", 0, 0 );
 #if MACOS_X
 	// On low settings, G4 systems & 64MB FX5200/NV34 Systems should default shadows off
 	bool oldArch;

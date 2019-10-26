@@ -52,7 +52,7 @@ const char *imageFilter[] = {
 idCVar idImageManager::image_filter( "image_filter", imageFilter[1], CVAR_RENDERER | CVAR_ARCHIVE, "changes texture filtering on mipmapped images", imageFilter, idCmdSystem::ArgCompletion_String<imageFilter> );
 idCVar idImageManager::image_anisotropy( "image_anisotropy", "1", CVAR_RENDERER | CVAR_ARCHIVE, "set the maximum texture anisotropy if available" );
 idCVar idImageManager::image_colorMipLevels( "image_colorMipLevels", "0", CVAR_RENDERER | CVAR_BOOL, "development aid to see texture mip usage" );
-idCVar idImageManager::image_preload( "image_preload", "1", CVAR_RENDERER | CVAR_BOOL | CVAR_ARCHIVE, "if 0, dynamically load all images" );
+idCVar idImageManager::image_preload( "image_preload", "0", 0, "if 0, dynamically load all images" );
 idCVar idImageManager::image_showBackgroundLoads( "image_showBackgroundLoads", "0", CVAR_RENDERER | CVAR_BOOL, "1 = print number of outstanding background loads" );
 #if 1
 idCVar idImageManager::image_downSize( "image_downSize", "0", CVAR_RENDERER | CVAR_ROM, "controls texture downsampling" );
@@ -1526,7 +1526,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 	image->levelLoadReferenced = true;
 
 	// load it if we aren't in a level preload
-	if ( image_preload.GetBool() && !insideLevelLoad ) {
+	if ( image_preload.GetBool() && !insideLevelLoad && 0 ) {
 		image->referencedOutsideLevelLoad = true;
 		image->ActuallyLoadImage( false );
 		declManager->MediaPrint( "%ix%i %s\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
@@ -1844,7 +1844,7 @@ void idImageManager::EndLevelLoad() {
 	int		purgeCount = 0;
 	int		keepCount = 0;
 	int		loadCount = 0;
-
+/*
 	// purge the ones we don't need
 	for ( int i = 0 ; i < images.Num() ; i++ ) {
 		idImage	*image = images[ i ];
@@ -1882,7 +1882,7 @@ void idImageManager::EndLevelLoad() {
 			}
 		}
 	}
-
+*/
 	int	end = Sys_Milliseconds();
 	common->Printf( "%5i purged from previous\n", purgeCount );
 	common->Printf( "%5i kept from previous\n", keepCount );

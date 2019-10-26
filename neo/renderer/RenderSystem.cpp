@@ -131,9 +131,9 @@ R_IssueRenderCommands
 Called by R_EndFrame each frame
 ====================
 */
-static void R_IssueRenderCommands( void ) {
-	if ( frameData->cmdHead->commandId == RC_NOP
-	        && !frameData->cmdHead->next ) {
+static void R_IssueRenderCommands( volatile frameData_t *fd ) {
+	if ( fd->cmdHead->commandId == RC_NOP
+	        && !fd->cmdHead->next ) {
 		// nothing to issue
 		return;
 	}
@@ -147,7 +147,7 @@ static void R_IssueRenderCommands( void ) {
 	// r_skipRender is usually more usefull, because it will still
 	// draw 2D graphics
 	if ( !r_skipBackEnd.GetBool() ) {
-		RB_ExecuteBackEndCommands( frameData->cmdHead );
+		RB_ExecuteBackEndCommands( fd->cmdHead );
 	}
 
 	R_ClearCommandChain();
@@ -294,6 +294,7 @@ idRenderSystemLocal::idRenderSystemLocal
 */
 idRenderSystemLocal::idRenderSystemLocal( void ) {
 	Clear();
+	memset( &renderThread, 0, sizeof( renderThread ) );
 }
 
 /*
@@ -599,6 +600,83 @@ void idRenderSystemLocal::DrawDemoPics() {
 	demoGuiModel->EmitFullScreen();
 }
 
+
+idRenderSystemLocal* threadSystem;
+void GLimp_ActivateContext();
+void GLimp_DeactivateContext();
+
+static volatile bool threadRun = false;
+static volatile bool threadDone = true;
+
+static volatile frameData_t *fdToRender = NULL;
+static volatile int vertList = 0;
+
+int RenderThread( void *pexit ) {
+
+
+	GLimp_ActivateContext();
+
+	while( 1 )
+	{
+		//LOGI("Thread waiting");
+		while(!threadRun){}
+		threadRun = false;
+
+		//LOGI("Thread runnging..");
+
+		//GLimp_ActivateContext();
+		threadSystem->BackendThread();
+		//GLimp_DeactivateContext();
+
+		//LOGI("Thread done");
+
+		threadDone = true;
+	}
+}
+
+void idRenderSystemLocal::BackendThread()
+{
+
+	LOGI("RUNNING IN THREAD");
+	vertexCache.BeginBackEnd(vertList);
+	R_IssueRenderCommands(fdToRender);
+}
+
+void idRenderSystemLocal::BackendThreadRun()
+{
+	//LOGI("BackendThreadRun called..");
+
+	threadSystem = this;
+	if ( !renderThread.threadHandle ) {
+		GLimp_DeactivateContext();
+		Sys_CreateThread( RenderThread, NULL, renderThread, "renderThread" );
+	}
+
+	// wait for backend to finish if still running
+    while(!threadDone){
+    }
+
+	fdToRender = frameData;
+	vertList = vertexCache.listNum;
+
+	//GLimp_DeactivateContext();
+	threadDone = false;
+	threadRun = true;
+
+	//while(!threadDone)
+	{
+		//LOGI("Waiting for BG thread");
+		//usleep(1000 * 1000);
+	}
+
+	//GLimp_ActivateContext();
+
+	//LOGI("Front end continuing");
+	//threadDone = false;
+
+	//LOGI("BackendThreadRun finished");
+}
+
 /*
 =============
 EndFrame
@@ -638,10 +716,10 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	cmd = (emptyCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
 	cmd->commandId = RC_SWAP_BUFFERS;
 
-    vertexCache.BeginBackEnd();
 
 	// start the back end up again with the new command list
-	R_IssueRenderCommands();
+	//R_IssueRenderCommands();
+	BackendThreadRun();
 
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers
@@ -853,6 +931,9 @@ CaptureRenderToFile
 ==============
 */
 void idRenderSystemLocal::CaptureRenderToFile( const char *fileName, bool fixAlpha ) {
+
+return;; //FIX ME!!!
+
 	if ( !glConfig.isInitialized ) {
 		return;
 	}
@@ -861,8 +942,8 @@ void idRenderSystemLocal::CaptureRenderToFile( const char *fileName, bool fixAlp
 
 	guiModel->EmitFullScreen();
 	guiModel->Clear();
-	R_IssueRenderCommands();
-
+	//R_IssueRenderCommands();
+BackendThreadRun();
 	// Disabled for OES2
 	//qglReadBuffer( GL_BACK );
 

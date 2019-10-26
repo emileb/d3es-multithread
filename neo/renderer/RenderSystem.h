@@ -188,6 +188,7 @@ public:
 	// FIXME: add an interface for arbitrary point/texcoord drawing
 
 
+
 	// a frame cam consist of 2D drawing and potentially multiple 3D scenes
 	// window sizes are needed to convert SCREEN_WIDTH / SCREEN_HEIGHT values
 	virtual void			BeginFrame( int windowWidth, int windowHeight ) = 0;
