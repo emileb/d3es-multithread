@@ -43,10 +43,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "renderer/VertexCache.h"
 
-static const int	FRAME_MEMORY_BYTES = 0x200000;
+static const int	FRAME_MEMORY_BYTES = 0x400000;
 static const int	EXPAND_HEADERS = 1024;
 
- static const int STATIC_LIVES = 4;
+ static const int STATIC_LIVES = 5;
 
 idCVar idVertexCache::r_showVertexCache("r_showVertexCache", "0", CVAR_INTEGER | CVAR_RENDERER, "");
 idCVar idVertexCache::r_vertexBufferMegs("r_vertexBufferMegs", "48", CVAR_INTEGER | CVAR_RENDERER, "");
@@ -186,7 +186,7 @@ void idVertexCache::Init() {
 	staticHeaders.next = staticHeaders.prev = &staticHeaders;
 
 
-	deferredFreeList.next = deferredFreeList.prev = &deferredFreeList;
+	deferredFreeList[0].next = deferredFreeList[0].prev = &deferredFreeList[0];
 
 	// set up the dynamic frame memory
 	frameBytes = FRAME_MEMORY_BYTES;
@@ -202,6 +202,7 @@ void idVertexCache::Init() {
         dynamicHeaders[i].next = dynamicHeaders[i].prev = &dynamicHeaders[i];
         freeDynamicIndexHeaders[i].next = freeDynamicIndexHeaders[i].prev = &freeDynamicIndexHeaders[i];
         dynamicIndexHeaders[i].next = dynamicIndexHeaders[i].prev = &dynamicIndexHeaders[i];
+	deferredFreeList[i].next = deferredFreeList[i].prev = &deferredFreeList[i];
 
 	}
 
@@ -312,6 +313,7 @@ void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool index
 
 	block->offset = 0;
 	block->tag = TAG_USED;
+	block->lives = STATIC_LIVES;
 
 	// save data for debugging
 	if (indexBuffer) {
@@ -405,10 +407,10 @@ void idVertexCache::Free(vertCache_t* block) {
 	block->next->prev = block->prev;
 	block->prev->next = block->next;
 
-	block->next = deferredFreeList.next;
-	block->prev = &deferredFreeList;
-	deferredFreeList.next->prev = block;
-	deferredFreeList.next = block;
+	block->next = deferredFreeList[listNum].next;
+	block->prev = &deferredFreeList[listNum];
+	deferredFreeList[listNum].next->prev = block;
+	deferredFreeList[listNum].next = block;
 }
 
 /*
@@ -593,8 +595,9 @@ void idVertexCache::EndFrame() {
 	}
 #endif
 
-	currentFrame = tr.frameCount;
-	listNum = currentFrame % NUM_VERTEX_FRAMES;
+	//currentFrame = tr.frameCount;
+	//listNum++;// = currentFrame % NUM_VERTEX_FRAMES;
+	listNum = listNum?0:1;
 	staticAllocThisFrame = 0;
 	staticCountThisFrame = 0;
 	staticAllocThisFrame_Index = 0;
@@ -606,8 +609,8 @@ void idVertexCache::EndFrame() {
 	tempOverflow = false;
 
 	// free all the deferred free headers
-	while (deferredFreeList.next != &deferredFreeList) {
-		ActuallyFree(deferredFreeList.next);
+	while (deferredFreeList[listNum].next != &deferredFreeList[listNum]) {
+		ActuallyFree(deferredFreeList[listNum].next);
 	}
 
 	// free all the frame temp headers

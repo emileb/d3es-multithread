@@ -141,7 +141,7 @@ private:
 
 	vertCache_t freeStaticHeaders;    // head of doubly linked list
 	vertCache_t staticHeaders;      // head of doubly linked list in MRU order,
-	vertCache_t deferredFreeList;    // head of doubly linked list
+	vertCache_t deferredFreeList[NUM_VERTEX_FRAMES];    // head of doubly linked list
 
 	vertCache_t freeDynamicHeaders[NUM_VERTEX_FRAMES];    // head of doubly linked list
 	vertCache_t freeDynamicIndexHeaders[NUM_VERTEX_FRAMES];    // head of doubly linked list (Index buffers)
