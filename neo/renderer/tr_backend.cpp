@@ -32,6 +32,10 @@ If you have questions concerning this license or the applicable additional terms
 frameData_t		*frameData;
 backEndState_t	backEnd;
 
+const unsigned int      NUM_FRAME_DATA = 2;
+frameData_t             *smpFrameData[NUM_FRAME_DATA];
+volatile unsigned int   smpFrame;
+
 /*
 ======================
 RB_SetDefaultGLState

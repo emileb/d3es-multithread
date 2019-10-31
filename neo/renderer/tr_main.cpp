@@ -38,6 +38,10 @@ If you have questions concerning this license or the applicable additional terms
 
 //====================================================================
 
+extern const unsigned int      NUM_FRAME_DATA = 2;
+extern frameData_t	           *smpFrameData[NUM_FRAME_DATA];
+extern volatile unsigned int   smpFrame;
+
 /*
 ======================
 idScreenRect::Clear
@@ -216,20 +220,24 @@ void R_ShutdownFrameData( void ) {
 	frameData_t *frame;
 	frameMemoryBlock_t *block;
 
-	// free any current data
-	frame = frameData;
-	if ( !frame ) {
-		return;
-	}
+	for (int n = 0; n < NUM_FRAME_DATA; n++)
+	{
+		// free any current data
+		frame = smpFrameData[n];
+		if ( !frame ) {
+			continue;
+		}
 
-	R_FreeDeferredTriSurfs( frame );
+		R_FreeDeferredTriSurfs( frame );
 
-	frameMemoryBlock_t *nextBlock;
-	for ( block = frame->memory ; block ; block = nextBlock ) {
-		nextBlock = block->next;
-		Mem_Free( block );
+		frameMemoryBlock_t *nextBlock;
+		for ( block = frame->memory ; block ; block = nextBlock ) {
+			nextBlock = block->next;
+			Mem_Free( block );
+		}
+		Mem_Free( frame );
+		smpFrameData[n] = NULL;
 	}
-	Mem_Free( frame );
 	frameData = NULL;
 }
 
@@ -245,18 +253,24 @@ void R_InitFrameData( void ) {
 
 	R_ShutdownFrameData();
 
-	frameData = (frameData_t *)Mem_ClearedAlloc( sizeof( *frameData ));
-	frame = frameData;
-	size = MEMORY_BLOCK_SIZE;
-	block = (frameMemoryBlock_t *)Mem_Alloc( size + sizeof( *block ) );
-	if ( !block ) {
-		common->FatalError( "R_InitFrameData: Mem_Alloc() failed" );
+	for (int n = 0; n < NUM_FRAME_DATA; n++)
+	{
+		smpFrameData[n] = (frameData_t *)Mem_ClearedAlloc( sizeof( frameData_t ));
+		frame = smpFrameData[n];
+		size = MEMORY_BLOCK_SIZE;
+		block = (frameMemoryBlock_t *)Mem_Alloc( size + sizeof( *block ) );
+		if ( !block ) {
+			common->FatalError( "R_InitFrameData: Mem_Alloc() failed" );
+		}
+		block->size = size;
+		block->used = 0;
+		block->next = NULL;
+		frame->memory = block;
+		frame->memoryHighwater = 0;
 	}
-	block->size = size;
-	block->used = 0;
-	block->next = NULL;
-	frame->memory = block;
-	frame->memoryHighwater = 0;
+
+	smpFrame = 0;
+	frameData = smpFrameData[0];
 
 	R_ToggleSmpFrame();
 }
