@@ -543,8 +543,34 @@ void R_LinkLightSurf(const drawSurf_t** link, const srfTriangles_t* tri, const v
 	drawSurf = (drawSurf_t*) R_FrameAlloc(sizeof(*drawSurf));
 
 	drawSurf->geo = tri;
+		if (tri)
+    	{
+    		//Emile, very important!!! need to make a new copy of surface triangles for SMP
+    		//Otherwise frontend thread is still referencing same copy as backend. 2 days to debug!
+    		srfTriangles_t *newTri = (srfTriangles_t *)R_FrameAlloc(sizeof(*tri));
+    		memcpy(newTri,tri,sizeof(*tri));
+
+    		drawSurf->geo = newTri;
+    	}
+    	else
+    	{
+    		drawSurf->geo = tri;
+    	}
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
+		if (shader)
+        	{
+        		//Emile, very important!!! need to make a new copy of surface triangles for SMP
+        		//Otherwise frontend thread is still referencing same copy as backend. 2 days to debug!
+        		idMaterial *copy = (idMaterial *)R_FrameAlloc(sizeof(*shader));
+        		memcpy(copy,shader,sizeof(*shader));
+
+        		drawSurf->material = copy;
+        	}
+
+
+
 	drawSurf->scissorRect = scissor;
 	drawSurf->dsFlags = 0;
 	if ( viewInsideShadow ) {
@@ -559,6 +585,8 @@ void R_LinkLightSurf(const drawSurf_t** link, const srfTriangles_t* tri, const v
 		const float* constRegs = shader->ConstantRegisters();
 		if ( constRegs ) {
 			// this shader has only constants for parameters
+			//float* regs = (float*) R_FrameAlloc(shader->GetNumRegisters() * sizeof(float));
+			//memcpy(regs,constRegs,shader->GetNumRegisters() * sizeof(float));
 			drawSurf->shaderRegisters = constRegs;
 		} else {
 			// FIXME: share with the ambient surface?
@@ -1066,8 +1094,31 @@ void R_AddDrawSurf(const srfTriangles_t* tri, const viewEntity_t* space, const r
 
 	drawSurf = (drawSurf_t*) R_FrameAlloc(sizeof(*drawSurf));
 	drawSurf->geo = tri;
+		if (tri)
+        	{
+        		//Emile, very important!!! need to make a new copy of surface triangles for SMP
+        		//Otherwise frontend thread is still referencing same copy as backend. 2 days to debug!
+        		srfTriangles_t *newTri = (srfTriangles_t *)R_FrameAlloc(sizeof(*tri));
+        		memcpy(newTri,tri,sizeof(*tri));
+
+        		drawSurf->geo = newTri;
+        	}
+        	else
+        	{
+        		drawSurf->geo = tri;
+        	}
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
+			if (shader)
+            	{
+            		//Emile, very important!!! need to make a new copy of surface triangles for SMP
+            		//Otherwise frontend thread is still referencing same copy as backend. 2 days to debug!
+            		idMaterial *copy = (idMaterial *)R_FrameAlloc(sizeof(*shader));
+            		memcpy(copy,shader,sizeof(*shader));
+
+            		drawSurf->material = copy;
+            	}
 	drawSurf->scissorRect = scissor;
 	drawSurf->sort = shader->GetSort() + tr.sortOffset;
 	drawSurf->dsFlags = 0;

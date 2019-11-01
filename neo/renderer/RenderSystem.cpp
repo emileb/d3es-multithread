@@ -132,8 +132,8 @@ Called by R_EndFrame each frame
 ====================
 */
 static void R_IssueRenderCommands( void ) {
-	if ( frameData->cmdHead->commandId == RC_NOP
-	        && !frameData->cmdHead->next ) {
+	if ( frameDataLast->cmdHead->commandId == RC_NOP
+	        && !frameDataLast->cmdHead->next ) {
 		// nothing to issue
 		return;
 	}
@@ -147,7 +147,7 @@ static void R_IssueRenderCommands( void ) {
 	// r_skipRender is usually more usefull, because it will still
 	// draw 2D graphics
 	if ( !r_skipBackEnd.GetBool() ) {
-		RB_ExecuteBackEndCommands( frameData->cmdHead );
+		RB_ExecuteBackEndCommands( frameDataLast->cmdHead );
 	}
 
 	R_ClearCommandChain();
@@ -599,6 +599,28 @@ void idRenderSystemLocal::DrawDemoPics() {
 	demoGuiModel->EmitFullScreen();
 }
 
+int skipFirst = 1;
+
+
+int frontEndThreadRunning = 0;
+void idRenderSystemLocal::FrontEndThreadStatus(int status)
+{
+	frontEndThreadRunning = status;
+	//common->Printf("frontEndThreadRunning set to %d",frontEndThreadRunning);
+}
+void idRenderSystemLocal::FrontEndThreadFinish()
+{
+	// close any gui drawing
+	guiModel->EmitFullScreen();
+	guiModel->Clear();
+
+	// add the swapbuffers command
+	emptyCommand_t *cmd = (emptyCommand_t *)R_GetCommandBuffer(sizeof(*cmd));
+	cmd->commandId = RC_SWAP_BUFFERS;
+
+}
+
+
 /*
 =============
 EndFrame
@@ -614,8 +636,8 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	}
 
 	// close any gui drawing
-	guiModel->EmitFullScreen();
-	guiModel->Clear();
+	//guiModel->EmitFullScreen();
+	//guiModel->Clear();
 
 	// save out timing information
 	if ( frontEndMsec ) {
@@ -635,13 +657,26 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	GL_CheckErrors();
 
 	// add the swapbuffers command
-	cmd = (emptyCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
-	cmd->commandId = RC_SWAP_BUFFERS;
+	//cmd = (emptyCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
+	//cmd->commandId = RC_SWAP_BUFFERS;
 
     vertexCache.BeginBackEnd();
 
+	if (skipFirst)
+	{
+		R_ToggleSmpFrame();
+		skipFirst = 0;
+		return;
+	}
+
+
 	// start the back end up again with the new command list
 	R_IssueRenderCommands();
+
+	while (	frontEndThreadRunning)
+	{
+		usleep(1000);
+	}
 
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers

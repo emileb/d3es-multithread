@@ -545,7 +545,7 @@ typedef struct {
 } frameData_t;
 
 extern	frameData_t	*frameData;
-
+extern frameData_t		*frameDataLast;
 //=======================================================================
 
 void R_LockSurfaceScene( viewDef_t *parms );
@@ -699,6 +699,9 @@ public:
 	virtual void			CaptureRenderToFile( const char *fileName, bool fixAlpha );
 	virtual void			UnCrop();
 	virtual bool			UploadImage( const char *imageName, const byte *data, int width, int height );
+
+	virtual void FrontEndThreadStatus(int status);
+    virtual void FrontEndThreadFinish();
 
 public:
 	// internal functions

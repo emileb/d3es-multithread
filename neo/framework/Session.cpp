@@ -2372,6 +2372,47 @@ void idSessionLocal::PacifierUpdate() {
 	idAsyncNetwork::server.PacifierUpdate();
 }
 
+#include "sys/platform.h"
+
+bool threadCreated = 0;
+volatile bool ready = false;
+idSessionLocal * thread_session;
+idGame * thread_game;
+volatile int thread_client;
+static xthreadInfo				renderThread;
+//void *feThreadRunner (void*) {
+static bool RUN = false;
+int feThreadRunner ( void * param) {
+
+	while (1)
+	{
+	 // common->Printf("Thread waiting");
+
+		while(!RUN)
+		{
+			usleep(500);
+		}
+		RUN = false;
+	 // common->Printf("Thread running");
+		bool gameDraw = thread_game->Draw((int)thread_client);
+
+		// draw the wipe material on top of this if it hasn't completed yet
+		thread_session->DrawWipeModel();
+
+		// draw debug graphs
+		thread_session->DrawCmdGraph();
+
+
+		console->Draw(false);
+
+
+		// close any gui drawing
+	  renderSystem->FrontEndThreadFinish();
+
+	  ready = false;
+	  renderSystem->FrontEndThreadStatus(0);
+	}
+}
 /*
 ===============
 idSessionLocal::Draw
@@ -2412,6 +2453,18 @@ void idSessionLocal::Draw() {
 		renderSystem->DrawDemoPics();
 	} else if ( mapSpawned ) {
 		bool gameDraw = false;
+
+			if ( !renderThread.threadHandle ) {
+        		Sys_CreateThread( feThreadRunner, NULL, renderThread, "renderThread" );
+        	}
+        thread_session = this;
+            thread_game = game;
+            thread_client = GetLocalClientNum();
+            renderSystem->FrontEndThreadStatus(1);
+        	RUN = true;
+        	return;
+
+		/*
 		// normal drawing for both single and multi player
 		if ( !com_skipGameDraw.GetBool() && GetLocalClientNum() >= 0 ) {
 			// draw the game view
@@ -2419,12 +2472,13 @@ void idSessionLocal::Draw() {
 			gameDraw = game->Draw( GetLocalClientNum() );
 			int end = Sys_Milliseconds();
 			time_gameDraw += ( end - start );	// note time used for com_speeds
+			LOGI("time_gameDraw = %d",time_gameDraw);
 		}
 		if ( !gameDraw ) {
 			renderSystem->SetColor( colorBlack );
 			renderSystem->DrawStretchPic( 0, 0, 640, 480, 0, 0, 1, 1, declManager->FindMaterial( "_white" ) );
 		}
-
+*/
 		// save off the 2D drawing from the game
 		if ( writeDemo ) {
 			renderSystem->WriteDemoPics();
@@ -2470,6 +2524,9 @@ void idSessionLocal::Draw() {
 	if ( !fullConsole ) {
 		console->Draw( false );
 	}
+
+		  renderSystem->FrontEndThreadFinish();
+
 }
 
 /*

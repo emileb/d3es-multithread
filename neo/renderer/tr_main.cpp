@@ -184,6 +184,20 @@ void R_ToggleSmpFrame( void ) {
 	if ( r_lockSurfaces.GetBool() ) {
 		return;
 	}
+	smpFrame++;
+
+    if (smpFrame & 0x1)
+    {
+        frameData = smpFrameData[0];
+        frameDataLast = smpFrameData[1];
+
+    }
+    else
+    {
+        frameData = smpFrameData[1];
+        frameDataLast = smpFrameData[0];
+    }
+
 	R_FreeDeferredTriSurfs( frameData );
 
 	// clear frame-temporary data

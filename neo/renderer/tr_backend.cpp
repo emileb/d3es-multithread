@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "renderer/tr_local.h"
 
 frameData_t		*frameData;
+frameData_t		*frameDataLast;
 backEndState_t	backEnd;
 
 const unsigned int      NUM_FRAME_DATA = 2;
