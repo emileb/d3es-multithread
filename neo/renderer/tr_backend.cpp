@@ -29,7 +29,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "renderer/tr_local.h"
 
-frameData_t		*frameData;
+
 backEndState_t	backEnd;
 
 /*

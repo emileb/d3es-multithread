@@ -74,9 +74,6 @@ src_renderer = \
 	renderer/RenderWorld_load.cpp \
 	renderer/RenderWorld_portals.cpp \
 	renderer/VertexCache.cpp \
-	renderer/draw_gles2.cpp \
-	renderer/draw_common.cpp \
-	renderer/tr_backend.cpp \
 	renderer/tr_deform.cpp \
 	renderer/tr_font.cpp \
 	renderer/tr_guisurf.cpp \
@@ -85,7 +82,6 @@ src_renderer = \
 	renderer/tr_main.cpp \
 	renderer/tr_orderIndexes.cpp \
 	renderer/tr_polytope.cpp \
-	renderer/tr_render.cpp \
 	renderer/tr_shadowbounds.cpp \
 	renderer/tr_stencilshadow.cpp \
 	renderer/tr_subview.cpp \

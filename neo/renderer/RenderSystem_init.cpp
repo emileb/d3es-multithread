@@ -204,9 +204,11 @@ idCVar r_noLight("r_noLight", "0", CVAR_RENDERER | CVAR_BOOL, "lighting disable 
 idCVar r_useETC1("r_useETC1", "0", CVAR_RENDERER | CVAR_BOOL, "use ETC1 compression");
 idCVar r_useETC1Cache("r_useETC1cache", "1", CVAR_RENDERER | CVAR_BOOL, "cache ETC1 data");
 
+/*
 // define qgl functions
 #define QGLPROC(name, rettype, args) rettype (GL_APIENTRYP q##name) args;
 #include "renderer/qgl_proc.h"
+*/
 
 /*
 =================
@@ -441,7 +443,7 @@ void R_InitOpenGL( void ) {
 		r_displayRefresh.SetInteger( 0 );
 		r_multiSamples.SetInteger( 0 );
 	}
-
+/*
 // load qgl function pointers
 #define QGLPROC(name, rettype, args) \
 	q##name = (rettype(GL_APIENTRYP)args)GLimp_ExtensionPointer(#name); \
@@ -449,6 +451,7 @@ void R_InitOpenGL( void ) {
 		common->FatalError("Unable to initialize OpenGL (%s)", #name);
 
 #include "renderer/qgl_proc.h"
+*/
 
 	// input and sound systems need to be tied to the new window
 	Sys_InitInput();
