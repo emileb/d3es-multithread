@@ -131,9 +131,9 @@ R_IssueRenderCommands
 Called by R_EndFrame each frame
 ====================
 */
-static void R_IssueRenderCommands( void ) {
-	if ( frameData->cmdHead->commandId == RC_NOP
-	        && !frameData->cmdHead->next ) {
+static void R_IssueRenderCommands( frameData_t *fd ) {
+	if ( fd->cmdHead->commandId == RC_NOP
+	        && !fd->cmdHead->next ) {
 		// nothing to issue
 		return;
 	}
@@ -143,11 +143,11 @@ static void R_IssueRenderCommands( void ) {
 	// nothing will be drawn to the screen.  If the prints
 	// are going to a file, or r_skipBackEnd is later disabled,
 	// usefull data can be received.
-
+LOGI("R_IssueRenderCommands frameData = %p",fd);
 	// r_skipRender is usually more usefull, because it will still
 	// draw 2D graphics
 	if ( !r_skipBackEnd.GetBool() ) {
-		RB_ExecuteBackEndCommands( frameData->cmdHead );
+		RB_ExecuteBackEndCommands( fd->cmdHead );
 	}
 
 	R_ClearCommandChain();
@@ -599,6 +599,7 @@ void idRenderSystemLocal::DrawDemoPics() {
 	demoGuiModel->EmitFullScreen();
 }
 
+
 /*
 =============
 EndFrame
@@ -641,7 +642,7 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
     vertexCache.BeginBackEnd();
 
 	// start the back end up again with the new command list
-	R_IssueRenderCommands();
+	R_IssueRenderCommands(frameData);
 
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers
@@ -856,7 +857,7 @@ void idRenderSystemLocal::CaptureRenderToFile( const char *fileName, bool fixAlp
 	if ( !glConfig.isInitialized ) {
 		return;
 	}
-
+/*
 	renderCrop_t *rc = &renderCrops[currentRenderCrop];
 
 	guiModel->EmitFullScreen();
@@ -885,6 +886,7 @@ void idRenderSystemLocal::CaptureRenderToFile( const char *fileName, bool fixAlp
 
 	R_StaticFree( data );
 	R_StaticFree( data2 );
+	*/
 }
 
 
