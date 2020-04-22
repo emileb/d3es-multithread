@@ -561,7 +561,7 @@ static void RB_GLSL_DrawInteraction(const drawInteraction_t* din) {
 	GL_SelectTexture(0);
 
 	// draw it
-	RB_DrawElementsWithCounters(din->surf->geo);
+	RB_DrawElementsWithCounters(din->surf);
 
 	// Restore color modulation state to default values
 	if ( din->vertexColor != SVC_IGNORE ) {
@@ -586,7 +586,7 @@ RB_GLSL_CreateSingleDrawInteractions(const drawSurf_t* surf, void (* DrawInterac
 	const float* lightRegs = vLight->shaderRegisters;
 	drawInteraction_t inter;
 
-	if ( r_skipInteractions.GetBool() || !surf->geo || !surf->geo->ambientCache ) {
+	if ( r_skipInteractions.GetBool() || !surf->geoFrontEnd || !surf->ambientCache ) {
 		return;
 	}
 
@@ -776,7 +776,7 @@ static void RB_GLSL_CreateDrawInteractions(const drawSurf_t* surf, const viewLig
 		}
 
 		// set the vertex pointers
-		idDrawVert* ac = (idDrawVert*) vertexCache.Position(surf->geo->ambientCache);
+		idDrawVert* ac = (idDrawVert*) vertexCache.Position(surf->ambientCache);
 
 		GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Normal), 3, GL_FLOAT, false, sizeof(idDrawVert),
 		                       ac->normal.ToFloatPtr());
@@ -823,6 +823,7 @@ the shadow volumes face INSIDE
 =====================
 */
 static void RB_T_GLSL_Shadow(const drawSurf_t* surf, const viewLight_t* vLight) {
+/* TODO, EMILE FIX THIS
 	const srfTriangles_t* tri = surf->geo;
 
 	if ( !tri->shadowCache ) {
@@ -881,7 +882,7 @@ static void RB_T_GLSL_Shadow(const drawSurf_t* surf, const viewLight_t* vLight) 
 		qglStencilOpSeparate(backEnd.viewDef->isMirror ? GL_BACK : GL_FRONT, GL_KEEP, GL_KEEP, GL_DECR);
 	}
 	RB_DrawShadowElementsWithCounters(tri, numIndexes);
-
+*/
 	// patent-free work around
 	/*if (!external) {
 	  // "preload" the stencil buffer with the number of volumes
@@ -1148,12 +1149,12 @@ static void RB_T_GLSL_BasicFog(const drawSurf_t* surf, const viewLight_t* vLight
 		GL_UniformMatrix4fv(offsetof(shaderProgram_t, fogMatrix), fogMatrix.ToFloatPtr());
 	}
 
-	idDrawVert* ac = (idDrawVert*) vertexCache.Position(surf->geo->ambientCache);
+	idDrawVert* ac = (idDrawVert*) vertexCache.Position(surf->ambientCache);
 
 	GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Vertex), 3, GL_FLOAT, false, sizeof(idDrawVert),
 	                       ac->xyz.ToFloatPtr());
 
-	RB_DrawElementsWithCounters(surf->geo);
+	RB_DrawElementsWithCounters(surf);
 }
 
 /*
@@ -1193,7 +1194,11 @@ void RB_GLSL_FogPass(const drawSurf_t* drawSurfs, const drawSurf_t* drawSurfs2, 
 
 	memset(&ds, 0, sizeof(ds));
 	ds.space = &backEnd.viewDef->worldSpace;
-	ds.geo = frustumTris;
+	//ds.geo = frustumTris;
+	ds.ambientCache = frustumTris->ambientCache;
+    ds.indexCache = frustumTris->indexCache;
+    ds.shadowCache = frustumTris->shadowCache;
+    ds.numIndexes = frustumTris->numIndexes;
 	ds.scissorRect = backEnd.viewDef->scissor;
 
 	// find the current color and density of the fog
@@ -1287,10 +1292,10 @@ void RB_T_GLSL_FillDepthBuffer(const drawSurf_t* surf) {
 		return;
 	}
 
-	const srfTriangles_t* const tri = surf->geo;
+	//const srfTriangles_t* const tri = surf->geo;
 
 	// some deforms may disable themselves by setting numIndexes = 0
-	if ( !tri->numIndexes ) {
+	if ( !surf->numIndexes ) {
 		return;
 	}
 
@@ -1300,7 +1305,7 @@ void RB_T_GLSL_FillDepthBuffer(const drawSurf_t* surf) {
 		return;
 	}
 
-	if ( !tri->ambientCache ) {
+	if ( !surf->ambientCache ) {
 		return;
 	}
 
@@ -1355,7 +1360,7 @@ void RB_T_GLSL_FillDepthBuffer(const drawSurf_t* surf) {
 	GL_Uniform4fv(offsetof(shaderProgram_t, glColor), color);
 
 	// Get vertex data
-	idDrawVert* ac = (idDrawVert*) vertexCache.Position(tri->ambientCache);
+	idDrawVert* ac = (idDrawVert*) vertexCache.Position(surf->ambientCache);
 
 	// Setup attribute pointers
 	GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Vertex), 3, GL_FLOAT, false, sizeof(idDrawVert),
@@ -1435,7 +1440,7 @@ void RB_T_GLSL_FillDepthBuffer(const drawSurf_t* surf) {
 			///////////
 			// Draw it
 			///////////
-			RB_DrawElementsWithCounters(tri);
+			RB_DrawElementsWithCounters(surf);
 
 			////////////////////////////////////////////////////////////
 			// Restore everything to an acceptable state for next stage
@@ -1476,7 +1481,7 @@ void RB_T_GLSL_FillDepthBuffer(const drawSurf_t* surf) {
 		///////////
 		// Draw it
 		///////////
-		RB_DrawElementsWithCounters(tri);
+		RB_DrawElementsWithCounters(surf);
 	}
 
 	/////////////////////////////////////////////
@@ -1656,7 +1661,7 @@ void RB_GLSL_T_RenderShaderPasses(const drawSurf_t* surf, const float mvp[16]) {
 
 	// usefull pointers
 	const idMaterial* const shader = surf->material;
-	const srfTriangles_t* const tri = surf->geo;
+//	const srfTriangles_t* const tri = surf->geo;
 
 	//////////////
 	// Skip cases
@@ -1674,11 +1679,11 @@ void RB_GLSL_T_RenderShaderPasses(const drawSurf_t* surf, const float mvp[16]) {
 	}
 
 	// some deforms may disable themselves by setting numIndexes = 0
-	if ( !tri->numIndexes ) {
+	if ( !surf->numIndexes ) {
 		return;
 	}
 
-	if ( !tri->ambientCache ) {
+	if ( !surf->ambientCache ) {
 		return;
 	}
 
@@ -1712,7 +1717,7 @@ void RB_GLSL_T_RenderShaderPasses(const drawSurf_t* surf, const float mvp[16]) {
 	GL_Cull(shader->GetCullType());
 
 	// Location of vertex attributes data
-	const idDrawVert* const ac = (const idDrawVert* const) vertexCache.Position(tri->ambientCache);
+	const idDrawVert* const ac = (const idDrawVert* const) vertexCache.Position(surf->ambientCache);
 
 	// get the expressions for conditionals / color / texcoords
 	const float* const regs = surf->shaderRegisters;
@@ -1975,7 +1980,7 @@ void RB_GLSL_T_RenderShaderPasses(const drawSurf_t* surf, const float mvp[16]) {
 			/////////////////////
 			// Draw the surface!
 			/////////////////////
-			RB_DrawElementsWithCounters(tri);
+			RB_DrawElementsWithCounters(surf);
 
 			/////////////////////////////////////////////
 			// Restore everything to an acceptable state
@@ -2175,7 +2180,7 @@ RB_T_BlendLight
 =====================
 */
 static void RB_T_GLSL_BlendLight(const drawSurf_t *surf, const viewLight_t* vLight) {
-	const srfTriangles_t *tri = surf->geo;
+//	const srfTriangles_t *tri = surf->geo;
 
 	////////////
 	// GL setup
@@ -2204,18 +2209,18 @@ static void RB_T_GLSL_BlendLight(const drawSurf_t *surf, const viewLight_t* vLig
 	// Attributes pointers
 
 	// This gets used for both blend lights and shadow draws
-	if (tri->ambientCache) {
-		idDrawVert *ac = (idDrawVert *) vertexCache.Position(tri->ambientCache);
+	if (surf->ambientCache) {
+		idDrawVert *ac = (idDrawVert *) vertexCache.Position(surf->ambientCache);
 		GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Vertex), 3, GL_FLOAT, false, sizeof(idDrawVert), ac->xyz.ToFloatPtr());
-	} else if (tri->shadowCache) {
-		shadowCache_t *sc = (shadowCache_t *) vertexCache.Position(tri->shadowCache);
+	} else if (surf->shadowCache) {
+		shadowCache_t *sc = (shadowCache_t *) vertexCache.Position(surf->shadowCache);
 		GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Vertex), 3, GL_FLOAT, false, sizeof(idDrawVert), sc->xyz.ToFloatPtr());
 	}
 
 	////////////////////
 	// Draw the surface
 	////////////////////
-	RB_DrawElementsWithCounters(tri);
+	RB_DrawElementsWithCounters(surf);
 }
 
 /*

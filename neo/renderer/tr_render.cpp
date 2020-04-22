@@ -43,24 +43,24 @@ If you have questions concerning this license or the applicable additional terms
 RB_DrawElementsWithCounters
 ================
 */
-void RB_DrawElementsWithCounters( const srfTriangles_t *tri ) {
+void RB_DrawElementsWithCounters( const drawSurf_t *surf ) {
 
 	backEnd.pc.c_drawElements++;
-	backEnd.pc.c_drawIndexes += tri->numIndexes;
-	backEnd.pc.c_drawVertexes += tri->numVerts;
-
+	//backEnd.pc.c_drawIndexes += tri->numIndexes;
+	//backEnd.pc.c_drawVertexes += tri->numVerts;
+/*
 	if ( tri->ambientSurface != NULL  ) {
-		if ( tri->indexes == tri->ambientSurface->indexes ) {
+		if ( tri->indexes == surf->ambientSurface->indexes ) {
 			backEnd.pc.c_drawRefIndexes += tri->numIndexes;
 		}
-		if ( tri->verts == tri->ambientSurface->verts ) {
+		if ( tri->verts == surf->ambientSurface->verts ) {
 			backEnd.pc.c_drawRefVertexes += tri->numVerts;
 		}
 	}
-
-	if ( tri->indexCache ) {
-		qglDrawElements( GL_TRIANGLES, tri->numIndexes, GL_INDEX_TYPE, (int *)vertexCache.Position( tri->indexCache ) );
-		backEnd.pc.c_vboIndexes += tri->numIndexes;
+*/
+	if ( surf->indexCache ) {
+		qglDrawElements( GL_TRIANGLES, surf->numIndexes, GL_INDEX_TYPE, (int *)vertexCache.Position( surf->indexCache ) );
+		backEnd.pc.c_vboIndexes += surf->numIndexes;
 	} else {
 		static bool bOnce = true;
 		if (bOnce) {
@@ -77,13 +77,14 @@ RB_DrawShadowElementsWithCounters
 May not use all the indexes in the surface if caps are skipped
 ================
 */
-void RB_DrawShadowElementsWithCounters( const srfTriangles_t *tri, int numIndexes ) {
+void RB_DrawShadowElementsWithCounters( const drawSurf_t *surf , int numIndexes ) {
 	backEnd.pc.c_shadowElements++;
+	/*
 	backEnd.pc.c_shadowIndexes += numIndexes;
 	backEnd.pc.c_shadowVertexes += tri->numVerts;
-
-	if ( tri->indexCache ) {
-		qglDrawElements( GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, (int *)vertexCache.Position( tri->indexCache ) );
+*/
+	if ( surf->indexCache ) {
+		qglDrawElements( GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, (int *)vertexCache.Position( surf->indexCache ) );
 		backEnd.pc.c_vboIndexes += numIndexes;
 	} else {
 		static bool bOnce = true;

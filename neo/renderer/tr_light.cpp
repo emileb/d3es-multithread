@@ -542,9 +542,15 @@ void R_LinkLightSurf(const drawSurf_t** link, const srfTriangles_t* tri, const v
 
 	drawSurf = (drawSurf_t*) R_FrameAlloc(sizeof(*drawSurf));
 
-	drawSurf->geo = tri;
+	drawSurf->geoFrontEnd = tri;
+	drawSurf->ambientCache = tri->ambientCache;
+    drawSurf->indexCache = tri->indexCache;
+    drawSurf->shadowCache = tri->shadowCache;
+	drawSurf->numIndexes = tri->numIndexes;
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
+
 	drawSurf->scissorRect = scissor;
 	drawSurf->dsFlags = 0;
 	if ( viewInsideShadow ) {
@@ -1065,9 +1071,16 @@ void R_AddDrawSurf(const srfTriangles_t* tri, const viewEntity_t* space, const r
 	float generatedShaderParms[MAX_ENTITY_SHADER_PARMS];
 
 	drawSurf = (drawSurf_t*) R_FrameAlloc(sizeof(*drawSurf));
-	drawSurf->geo = tri;
+
+	drawSurf->geoFrontEnd = tri;
+
+	drawSurf->ambientCache = tri->ambientCache;
+	drawSurf->indexCache = tri->indexCache;
+	drawSurf->shadowCache = tri->shadowCache;
+	drawSurf->numIndexes = tri->numIndexes;
 	drawSurf->space = space;
 	drawSurf->material = shader;
+
 	drawSurf->scissorRect = scissor;
 	drawSurf->sort = shader->GetSort() + tr.sortOffset;
 	drawSurf->dsFlags = 0;

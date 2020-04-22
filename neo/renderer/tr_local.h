@@ -112,7 +112,7 @@ SURFACES
 static const int	DSF_VIEW_INSIDE_SHADOW	= 1;
 
 typedef struct drawSurf_s {
-	const srfTriangles_t	*geo;
+	const srfTriangles_t	*geoFrontEnd;
 	const struct viewEntity_s *space;
 	const idMaterial		*material;	// may be NULL for shadow volumes
 	float					sort;		// material->sort, modified by gui / entity sort offsets
@@ -121,6 +121,11 @@ typedef struct drawSurf_s {
 	idScreenRect			scissorRect;	// for scissor clipping, local inside renderView viewport
 	int						dsFlags;			// DSF_VIEW_INSIDE_SHADOW, etc
 	float  wobbleTransform[16];
+	int						numIndexes;
+		// data in vertex object space, not directly readable by the CPU
+    	struct vertCache_s *		indexCache;				// int
+    	struct vertCache_s *		ambientCache;			// idDrawVert
+    	struct vertCache_s *		shadowCache;			// shadowCache_t
 } drawSurf_t;
 
 
@@ -1156,8 +1161,8 @@ RENDER BACKEND
 void RB_DrawView( const void *data );
 void RB_RenderView( void );
 
-void RB_DrawElementsWithCounters( const srfTriangles_t *tri );
-void RB_DrawShadowElementsWithCounters( const srfTriangles_t *tri, int numIndexes );
+void RB_DrawElementsWithCounters( const drawSurf_t *surf );
+void RB_DrawShadowElementsWithCounters( const drawSurf_t *surf , int numIndexes );
 void RB_SubmittInteraction( drawInteraction_t *din, void (*DrawInteraction)(const drawInteraction_t *) );
 void RB_SetDrawInteraction( const shaderStage_t *surfaceStage, const float *surfaceRegs, idImage **image, idVec4 matrix[2], float color[4] );
 void RB_BindVariableStageImage( const textureStage_t *texture, const float *shaderRegisters );
