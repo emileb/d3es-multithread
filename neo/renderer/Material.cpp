@@ -2561,10 +2561,13 @@ idMaterial::UpdateCinematic
 =============
 */
 void idMaterial::UpdateCinematic( int time ) const {
+// Do not update cinematics from front end, just wait until the back uses it and update form there (fix MT)
+/*
 	if ( !stages || !stages[0].texture.cinematic || !backEnd.viewDef ) {
 		return;
 	}
 	stages[0].texture.cinematic->ImageForTime( tr.primaryRenderView.time );
+*/
 }
 
 /*
