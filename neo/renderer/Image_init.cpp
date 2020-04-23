@@ -1419,7 +1419,7 @@ idImage *idImageManager::ImageFromFunction( const char *_name, void (*generatorF
 
 	image->generatorFunction = generatorFunction;
 
-	if ( image_preload.GetBool() && 0) {
+	if ( image_preload.GetBool()) {
 		image->referencedOutsideLevelLoad = true;
 		image->ActuallyLoadImage( false );
 	}
@@ -1496,7 +1496,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 			image->depth = depth;
 			image->levelLoadReferenced = true;
 
-			if ( image_preload.GetBool() && !insideLevelLoad && 0 ) {
+			if ( image_preload.GetBool() && !insideLevelLoad ) {
 				image->referencedOutsideLevelLoad = true;
 				image->ActuallyLoadImage( false );
 				declManager->MediaPrint( "%ix%i %s (reload for mixed referneces)\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
@@ -1526,7 +1526,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 	image->levelLoadReferenced = true;
 
 	// load it if we aren't in a level preload
-	if ( image_preload.GetBool() && !insideLevelLoad  && 0) {
+	if ( image_preload.GetBool() && !insideLevelLoad) {
 		image->referencedOutsideLevelLoad = true;
 		image->ActuallyLoadImage( false );
 		declManager->MediaPrint( "%ix%i %s\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
