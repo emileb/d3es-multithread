@@ -99,10 +99,12 @@ public:
 	// Also prints debugging info when enabled
 	void EndFrame();
 
-	void BeginBackEnd();
+	void BeginBackEnd(int which);
 
+	int GetListNum();
 	// listVertexCache calls this
 	void List();
+
 
 private:
 	void InitMemoryBlocks(int size);
@@ -117,11 +119,11 @@ private:
 
 	int staticAllocThisFrame;  // debug counter
 	int staticCountThisFrame;
-	int dynamicAllocThisFrame;
+	int dynamicAllocThisFrame[NUM_VERTEX_FRAMES];
 	int dynamicCountThisFrame;
 	int staticAllocThisFrame_Index;  // for Index buffers
 	int staticCountThisFrame_Index;
-	int dynamicAllocThisFrame_Index;
+	int dynamicAllocThisFrame_Index[NUM_VERTEX_FRAMES];
 	int dynamicCountThisFrame_Index;
 
 	int currentFrame;      // for purgable block tracking
@@ -140,12 +142,12 @@ private:
 	vertCache_t freeDynamicHeaders;    // head of doubly linked list
 	vertCache_t freeDynamicIndexHeaders;    // head of doubly linked list (Index buffers)
 
-	vertCache_t dynamicHeaders;      // head of doubly linked list
-	vertCache_t dynamicIndexHeaders;      // head of doubly linked list (Index buffers)
+	vertCache_t dynamicHeaders[NUM_VERTEX_FRAMES];      // head of doubly linked list
+	vertCache_t dynamicIndexHeaders[NUM_VERTEX_FRAMES];      // head of doubly linked list (Index buffers)
 
 	vertCache_t staticHeaders;      // head of doubly linked list in MRU order,
 
-	vertCache_t deferredFreeList;    // head of doubly linked list
+	vertCache_t deferredFreeList[NUM_VERTEX_FRAMES];    // head of doubly linked list
 
 	int frameBytes;        // for each of NUM_VERTEX_FRAMES frames
 

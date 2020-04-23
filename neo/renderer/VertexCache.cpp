@@ -47,7 +47,7 @@ static const int	FRAME_MEMORY_BYTES = 0x200000;
 static const int	EXPAND_HEADERS = 1024;
 
 idCVar idVertexCache::r_showVertexCache("r_showVertexCache", "0", CVAR_INTEGER | CVAR_RENDERER, "");
-idCVar idVertexCache::r_vertexBufferMegs("r_vertexBufferMegs", "48", CVAR_INTEGER | CVAR_RENDERER, "");
+idCVar idVertexCache::r_vertexBufferMegs("r_vertexBufferMegs", "128", CVAR_INTEGER | CVAR_RENDERER, "");
 
 idVertexCache		vertexCache;
 
@@ -178,11 +178,8 @@ void idVertexCache::Init() {
 	staticHeaders.next = staticHeaders.prev = &staticHeaders;
 
 	freeDynamicHeaders.next = freeDynamicHeaders.prev = &freeDynamicHeaders;
-	dynamicHeaders.next = dynamicHeaders.prev = &dynamicHeaders;
 	freeDynamicIndexHeaders.next = freeDynamicIndexHeaders.prev = &freeDynamicIndexHeaders;
-	dynamicIndexHeaders.next = dynamicIndexHeaders.prev = &dynamicIndexHeaders;
 
-	deferredFreeList.next = deferredFreeList.prev = &deferredFreeList;
 
 	// set up the dynamic frame memory
 	frameBytes = FRAME_MEMORY_BYTES;
@@ -193,6 +190,10 @@ void idVertexCache::Init() {
 	for (int i = 0; i < NUM_VERTEX_FRAMES; i++) {
 		tempBuffers[i] = CreateTempVbo(frameBytes, false);
 		tempIndexBuffers[i] = CreateTempVbo(frameBytes, true);
+		dynamicHeaders[i].next = dynamicHeaders[i].prev = &dynamicHeaders[i];
+        dynamicIndexHeaders[i].next = dynamicIndexHeaders[i].prev = &dynamicIndexHeaders[i];
+		deferredFreeList[i].next = deferredFreeList[i].prev = &deferredFreeList[i];
+
 	}
 
 	EndFrame();
@@ -392,10 +393,10 @@ void idVertexCache::Free(vertCache_t* block) {
 	block->next->prev = block->prev;
 	block->prev->next = block->next;
 
-	block->next = deferredFreeList.next;
-	block->prev = &deferredFreeList;
-	deferredFreeList.next->prev = block;
-	deferredFreeList.next = block;
+	block->next = deferredFreeList[listNum].next;
+	block->prev = &deferredFreeList[listNum];
+	deferredFreeList[listNum].next->prev = block;
+	deferredFreeList[listNum].next = block;
 }
 
 /*
@@ -415,7 +416,7 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 	}
 
 	if (indexBuffer) {
-		if (dynamicAllocThisFrame_Index + size > frameBytes) {
+		if (dynamicAllocThisFrame_Index[listNum] + size > frameBytes) {
 			// if we don't have enough room in the temp block, allocate a static block,
 			// but immediately free it so it will get freed at the next frame
 			tempOverflow = true;
@@ -424,7 +425,7 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 			return block;
 		}
 	} else {
-		if (dynamicAllocThisFrame + size > frameBytes) {
+		if (dynamicAllocThisFrame[listNum] + size > frameBytes) {
 			// if we don't have enough room in the temp block, allocate a static block,
 			// but immediately free it so it will get freed at the next frame
 			tempOverflow = true;
@@ -467,8 +468,8 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 		block = freeDynamicIndexHeaders.next;
 		block->next->prev = block->prev;
 		block->prev->next = block->next;
-		block->next = dynamicIndexHeaders.next;
-		block->prev = &dynamicIndexHeaders;
+		block->next = dynamicIndexHeaders[listNum].next;
+		block->prev = &dynamicIndexHeaders[listNum];
 		block->next->prev = block;
 		block->prev->next = block;
 
@@ -477,8 +478,8 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 		block = freeDynamicHeaders.next;
 		block->next->prev = block->prev;
 		block->prev->next = block->next;
-		block->next = dynamicHeaders.next;
-		block->prev = &dynamicHeaders;
+		block->next = dynamicHeaders[listNum].next;
+		block->prev = &dynamicHeaders[listNum];
 		block->next->prev = block;
 		block->prev->next = block;
 	}
@@ -491,12 +492,12 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 	block->indexBuffer = indexBuffer;
 	if (indexBuffer) {
 
-		block->offset = dynamicAllocThisFrame_Index;
-		dynamicAllocThisFrame_Index += block->size;
+		block->offset = dynamicAllocThisFrame_Index[listNum];
+		dynamicAllocThisFrame_Index[listNum] += block->size;
 		dynamicCountThisFrame_Index++;
 	} else {
-		block->offset = dynamicAllocThisFrame;
-		dynamicAllocThisFrame += block->size;
+		block->offset = dynamicAllocThisFrame[listNum];
+		dynamicAllocThisFrame[listNum] += block->size;
 		dynamicCountThisFrame++;
 	}
 
@@ -516,18 +517,18 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 	return block;
 }
 
-void  idVertexCache::BeginBackEnd()
+void  idVertexCache::BeginBackEnd(int which)
 {
 //LOGI("BeginBackEnd list = %d, size index = %d, size = %d", listNum,dynamicAllocThisFrame_Index,dynamicAllocThisFrame);
 
-	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[listNum]->vbo);
-	currentBoundVBO_Index =  tempIndexBuffers[listNum]->vbo;
-	qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index, tempIndexBuffers[listNum]->frontEndMemory);
+	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
+	currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
+	qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory);
 	//qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index, tempIndexBuffers[listNum]->frontEndMemory,GL_STATIC_DRAW);
 
-	qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[listNum]->vbo);
-	currentBoundVBO = tempBuffers[listNum]->vbo;
-	qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame, tempBuffers[listNum]->frontEndMemory);
+	qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[which]->vbo);
+	currentBoundVBO = tempBuffers[which]->vbo;
+	qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory);
 	//qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame, tempBuffers[listNum]->frontEndMemory,GL_STATIC_DRAW);
 
 }
@@ -555,7 +556,7 @@ void idVertexCache::EndFrame() {
 		const char* frameOverflow = tempOverflow ? "(OVERFLOW)" : "";
 
 		common->Printf("vertex dynamic:%i=%ik%s, static alloc:%i=%ik used:%i=%ik total:%i=%ik\n",
-		               dynamicCountThisFrame + dynamicCountThisFrame_Index, (dynamicAllocThisFrame + dynamicAllocThisFrame_Index) / 1024, frameOverflow,
+		               dynamicCountThisFrame + dynamicCountThisFrame_Index, (dynamicAllocThisFrame[listNum] + dynamicAllocThisFrame_Index[listNum]) / 1024, frameOverflow,
 		               staticCountThisFrame + staticCountThisFrame_Index, (staticAllocThisFrame + staticAllocThisFrame_Index) / 1024,
 		               staticUseCount, staticUseSize / 1024,
 		               staticCountTotal, staticAllocTotal / 1024);
@@ -576,44 +577,58 @@ void idVertexCache::EndFrame() {
 
 	}
 #endif
+void waitBackend();
+
 
 	currentFrame = tr.frameCount;
+
 	listNum = currentFrame % NUM_VERTEX_FRAMES;
+
 	staticAllocThisFrame = 0;
 	staticCountThisFrame = 0;
 	staticAllocThisFrame_Index = 0;
 	staticCountThisFrame_Index = 0;
-	dynamicAllocThisFrame_Index = 0;
+	dynamicAllocThisFrame_Index[listNum] = 0;
 	dynamicCountThisFrame_Index = 0;
-	dynamicAllocThisFrame = 0;
+	dynamicAllocThisFrame[listNum] = 0;
 	dynamicCountThisFrame = 0;
 	tempOverflow = false;
 
 	// free all the deferred free headers
-	while (deferredFreeList.next != &deferredFreeList) {
-		ActuallyFree(deferredFreeList.next);
+	while (deferredFreeList[listNum].next != &deferredFreeList[listNum]) {
+		ActuallyFree(deferredFreeList[listNum].next);
 	}
 
 	// free all the frame temp headers
-	vertCache_t* block = dynamicHeaders.next;
-	if (block != &dynamicHeaders) {
+	vertCache_t* block = dynamicHeaders[listNum].next;
+	if (block != &dynamicHeaders[listNum]) {
 		block->prev = &freeDynamicHeaders;
-		dynamicHeaders.prev->next = freeDynamicHeaders.next;
-		freeDynamicHeaders.next->prev = dynamicHeaders.prev;
+		dynamicHeaders[listNum].prev->next = freeDynamicHeaders.next;
+		freeDynamicHeaders.next->prev = dynamicHeaders[listNum].prev;
 		freeDynamicHeaders.next = block;
 
-		dynamicHeaders.next = dynamicHeaders.prev = &dynamicHeaders;
+		dynamicHeaders[listNum].next = dynamicHeaders[listNum].prev = &dynamicHeaders[listNum];
 	}
 
-	block = dynamicIndexHeaders.next;
-	if (block != &dynamicIndexHeaders) {
+	block = dynamicIndexHeaders[listNum].next;
+	if (block != &dynamicIndexHeaders[listNum]) {
 		block->prev = &freeDynamicIndexHeaders;
-		dynamicIndexHeaders.prev->next = freeDynamicIndexHeaders.next;
-		freeDynamicIndexHeaders.next->prev = dynamicIndexHeaders.prev;
+		dynamicIndexHeaders[listNum].prev->next = freeDynamicIndexHeaders.next;
+		freeDynamicIndexHeaders.next->prev = dynamicIndexHeaders[listNum].prev;
 		freeDynamicIndexHeaders.next = block;
 
-		dynamicIndexHeaders.next = dynamicIndexHeaders.prev = &dynamicIndexHeaders;
+		dynamicIndexHeaders[listNum].next = dynamicIndexHeaders[listNum].prev = &dynamicIndexHeaders[listNum];
 	}
+}
+
+/*
+=============
+idVertexCache::GetListNum
+=============
+*/
+int idVertexCache::GetListNum()
+{
+	return listNum;
 }
 
 /*
