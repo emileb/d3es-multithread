@@ -337,6 +337,12 @@ public:
 	// Called only by renderSystem::EndLevelLoad
 	void				EndLevelLoad();
 
+	void				AddAllocList(idImage * image);
+	void				AddPurgeList(idImage * iamge);
+
+	idImage *			GetNextAllocImage();
+	idImage *			GetNextPurgeImage();
+
 	// used to clear and then write the dds conversion batch file
 	void				StartBuild();
 	void				FinishBuild( bool removeDups = false );
@@ -395,6 +401,9 @@ public:
 	idList<idImage*>	images;
 	idStrList			ddsList;
 	idHashIndex			ddsHash;
+
+	idList<idImage*>	imagesAlloc; //List for the backend thread
+	idList<idImage*>	imagesPurge; //List for the backend thread
 
 	bool				insideLevelLoad;			// don't actually load images now
 

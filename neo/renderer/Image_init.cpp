@@ -1020,9 +1020,11 @@ void idImage::Reload( bool force ) {
 
 	common->DPrintf( "reloading %s.\n", imgName.c_str() );
 
-	PurgeImage();
+	//PurgeImage();
+	globalImages->AddPurgeList( this );
 
-	ActuallyLoadImage( false );
+	//ActuallyLoadImage( false );
+	globalImages->AddAllocList( this );
 }
 
 /*
@@ -1421,7 +1423,8 @@ idImage *idImageManager::ImageFromFunction( const char *_name, void (*generatorF
 
 	if ( image_preload.GetBool()) {
 		image->referencedOutsideLevelLoad = true;
-		image->ActuallyLoadImage( false );
+		//image->ActuallyLoadImage( false );
+		globalImages->AddAllocList( image );
 	}
 
 	return image;
@@ -1495,10 +1498,13 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 			image->allowDownSize = allowDownSize;
 			image->depth = depth;
 			image->levelLoadReferenced = true;
+			
+			// Always add to the alloc list
+			globalImages->AddAllocList( image );
 
 			if ( image_preload.GetBool() && !insideLevelLoad ) {
 				image->referencedOutsideLevelLoad = true;
-				image->ActuallyLoadImage( false );
+				//image->ActuallyLoadImage( false );
 				declManager->MediaPrint( "%ix%i %s (reload for mixed referneces)\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
 			}
 			return image;
@@ -1525,10 +1531,13 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 
 	image->levelLoadReferenced = true;
 
+	// Always add to the alloc list
+	globalImages->AddAllocList( image );
+
 	// load it if we aren't in a level preload
 	if ( image_preload.GetBool() && !insideLevelLoad) {
 		image->referencedOutsideLevelLoad = true;
-		image->ActuallyLoadImage( false );
+		//image->ActuallyLoadImage( false );
 		declManager->MediaPrint( "%ix%i %s\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
 	} else {
 		declManager->MediaPrint( "%s\n", image->imgName.c_str() );
@@ -1581,7 +1590,8 @@ void idImageManager::PurgeAllImages() {
 
 	for ( i = 0; i < images.Num() ; i++ ) {
 		image = images[i];
-		image->PurgeImage();
+		//image->PurgeImage();
+		globalImages->AddPurgeList( image );
 	}
 }
 
@@ -1738,6 +1748,9 @@ void idImageManager::Init() {
 
 	images.Resize( 1024, 1024 );
 
+	imagesAlloc.Resize( 1024, 1024 );
+	imagesPurge.Resize( 1024, 1024 );
+
 	// clear the cached LRU
 	cacheLRU.cacheUsageNext = &cacheLRU;
 	cacheLRU.cacheUsagePrev = &cacheLRU;
@@ -1810,7 +1823,8 @@ void idImageManager::BeginLevelLoad() {
 		}
 
 		if ( com_purgeAll.GetBool() ) {
-			image->PurgeImage();
+			//image->PurgeImage();
+			globalImages->AddPurgeList( image );
 		}
 
 		image->levelLoadReferenced = false;
@@ -1855,7 +1869,8 @@ void idImageManager::EndLevelLoad() {
 		if ( !image->levelLoadReferenced && !image->referencedOutsideLevelLoad ) {
 //			common->Printf( "Purging %s\n", image->imgName.c_str() );
 			purgeCount++;
-			image->PurgeImage();
+			//image->PurgeImage();
+			globalImages->AddPurgeList( image );
 		} else if ( image->texnum != idImage::TEXTURE_NOT_LOADED ) {
 //			common->Printf( "Keeping %s\n", image->imgName.c_str() );
 			keepCount++;
@@ -1872,7 +1887,8 @@ void idImageManager::EndLevelLoad() {
 		if ( image->levelLoadReferenced && image->texnum == idImage::TEXTURE_NOT_LOADED ) {
 //			common->Printf( "Loading %s\n", image->imgName.c_str() );
 			loadCount++;
-			image->ActuallyLoadImage( false );
+			//image->ActuallyLoadImage( false );
+			globalImages->AddAllocList( image );
 
 			if ( ( loadCount & 15 ) == 0 ) {
 				session->PacifierUpdate();
@@ -1890,6 +1906,51 @@ void idImageManager::EndLevelLoad() {
 	common->Printf( "all images loaded in %5.1f seconds\n", (end-start) * 0.001 );
 }
 
+
+void idImageManager::AddAllocList( idImage * image )
+{
+	if(image)
+	{
+		LOGI("AddAllocList");
+		imagesAlloc.Append( image );
+	}
+}
+
+
+void idImageManager::AddPurgeList( idImage * image )
+{
+	if(image)
+	{
+		LOGI("AddPurgeList");
+		imagesPurge.Append( image );
+	}
+}
+
+idImage * idImageManager::GetNextAllocImage()
+{
+	idImage * img = NULL;
+
+	if(imagesAlloc.Num() > 0)
+	{
+		img = imagesAlloc[0];
+		imagesAlloc.Remove( img );
+	}
+
+	return img;
+}
+
+idImage * idImageManager::GetNextPurgeImage()
+{
+	idImage * img = NULL;
+
+	if(imagesPurge.Num() > 0)
+	{
+		img = imagesPurge[0];
+		imagesPurge.Remove( img );
+	}
+
+	return img;
+}
 /*
 ===============
 idImageManager::StartBuild
