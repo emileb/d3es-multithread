@@ -203,7 +203,7 @@ public:
 	void		GetDownsize( int &scaled_width, int &scaled_height ) const;
 	void		MakeDefault();	// fill with a grid pattern
 	void		SetImageFilterAndRepeat() const;
-	void		ActuallyLoadImage( bool fromBackEnd );
+	void		ActuallyLoadImage( bool fromBind );
 	int			BitsForInternalFormat( int internalFormat ) const;
 	void		UploadCompressedNormalMap( int width, int height, const byte *rgba, int mipLevel );
 	void		ImageProgramStringToCompressedFileName( const char *imageProg, char *fileName ) const;

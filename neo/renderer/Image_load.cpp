@@ -831,9 +831,16 @@ Absolutely every image goes through this path
 On exit, the idImage will have a valid OpenGL texture number that can be bound
 ===============
 */
-void	idImage::ActuallyLoadImage( bool fromBackEnd ) {
+void	idImage::ActuallyLoadImage( bool fromBind ) {
 	int		width, height;
 	byte	*pic;
+
+	if(fromBind)
+	{
+		LOGI("ERROR!! CAN NOT LOAD IMAGE FROM BIND");
+		return;
+	}
+
 
 	// this is the ONLY place generatorFunction will ever be called
 	if ( generatorFunction ) {
