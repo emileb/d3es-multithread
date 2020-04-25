@@ -131,7 +131,7 @@ R_IssueRenderCommands
 Called by R_EndFrame each frame
 ====================
 */
-static void R_IssueRenderCommands( frameData_t *fd ) {
+static void R_IssueRenderCommands( volatile frameData_t *fd ) {
 	if ( fd->cmdHead->commandId == RC_NOP
 	        && !fd->cmdHead->next ) {
 		// nothing to issue
@@ -143,14 +143,12 @@ static void R_IssueRenderCommands( frameData_t *fd ) {
 	// nothing will be drawn to the screen.  If the prints
 	// are going to a file, or r_skipBackEnd is later disabled,
 	// usefull data can be received.
-LOGI("R_IssueRenderCommands frameData = %p",fd);
+
 	// r_skipRender is usually more usefull, because it will still
 	// draw 2D graphics
 	if ( !r_skipBackEnd.GetBool() ) {
 		RB_ExecuteBackEndCommands( fd->cmdHead );
 	}
-
-	R_ClearCommandChain();
 }
 
 /*
@@ -294,6 +292,7 @@ idRenderSystemLocal::idRenderSystemLocal
 */
 idRenderSystemLocal::idRenderSystemLocal( void ) {
 	Clear();
+	multithreadActive = true;
 }
 
 /*
@@ -600,6 +599,93 @@ void idRenderSystemLocal::DrawDemoPics() {
 }
 
 
+void GLimp_ActivateContext();
+void GLimp_DeactivateContext();
+
+int idRenderSystemLocal::BackendThreadRunner(void *localRenderSystem)
+{
+	idRenderSystemLocal *local = (idRenderSystemLocal*)localRenderSystem;
+	local->BackendThread();
+}
+
+void idRenderSystemLocal::BackendThreadWait()
+{
+	int n = 0;
+	while(!backendDone)
+    {
+        //LOGI("Waiting for BG thread");
+        usleep(500 * 1);
+        n++;
+    }
+}
+
+void idRenderSystemLocal::BackendThread()
+{
+	GLimp_ActivateContext();
+	
+	while( 1 )
+	{
+		//LOGI("Thread waiting..");
+
+		while(!threadRun)
+		{
+			usleep(500);
+		}
+		threadRun = false;
+
+		BackendThreadTask();
+	}
+}
+
+
+void idRenderSystemLocal::BackendThreadTask()
+{
+	idImage * img;
+	// Purge all images
+	while( (img = globalImages->GetNextPurgeImage()) != NULL )
+	{
+		LOGI("IMAGE PURGE!");
+		img->PurgeImage();
+	}
+
+	// Load all images
+	while( (img = globalImages->GetNextAllocImage()) != NULL )
+	{
+		LOGI("IMAGE LOAD!");
+		img->ActuallyLoadImage( false );
+	}
+
+	imagesDone = true;
+
+	vertexCache.BeginBackEnd(vertListToRender);
+	R_IssueRenderCommands(fdToRender);
+
+	backendDone = true;
+}
+
+void idRenderSystemLocal::BackendThreadExecute()
+{
+	//LOGI("BackendThreadRun called..");
+	imagesDone = false;
+	backendDone = false;
+
+	if(multithreadActive)
+	{
+		if ( !renderThread.threadHandle ) {
+			GLimp_DeactivateContext();
+			Sys_CreateThread( &idRenderSystemLocal::BackendThreadRunner, this, renderThread, "renderThread" );
+		}
+
+		// Start Thread
+		threadRun = true;
+	}
+	else // No multithread, just execute in sequence
+	{
+		BackendThreadTask();
+	}
+}
+
+
 /*
 =============
 EndFrame
@@ -639,10 +725,19 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	cmd = (emptyCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
 	cmd->commandId = RC_SWAP_BUFFERS;
 
-    vertexCache.BeginBackEnd();
+	//Wait for last backend rendering to finish
+	BackendThreadWait();
 
-	// start the back end up again with the new command list
-	R_IssueRenderCommands(frameData);
+	//Save the current vertexs and framedata to use for next render
+	vertListToRender = vertexCache.GetListNum();
+	fdToRender = frameData;
+
+	BackendThreadExecute();
+
+	while(!imagesDone)
+	{
+		usleep(500);
+	}
 
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers
@@ -650,6 +745,8 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 
 	// we can now release the vertexes used this frame
 	vertexCache.EndFrame();
+
+	R_ClearCommandChain();
 
 	if ( session->writeDemo ) {
 		session->writeDemo->WriteInt( DS_RENDER );

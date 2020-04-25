@@ -26,7 +26,7 @@ LOCAL_CPPFLAGS += -Wno-sign-compare \
 # Not avaliable in Android untill N
 LOCAL_CFLAGS := -DIOAPI_NO_64
 
-LOCAL_CFLAGS += -fno-unsafe-math-optimizations -fno-strict-aliasing -fno-math-errno -fno-trapping-math -fomit-frame-pointer -fvisibility=hidden -fsigned-char
+LOCAL_CFLAGS +=  -fno-unsafe-math-optimizations -fno-strict-aliasing -fno-math-errno -fno-trapping-math -fsigned-char
 
 
 SRC_ANDROID = mobile/game_interface.cpp \

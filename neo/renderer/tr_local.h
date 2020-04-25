@@ -714,6 +714,32 @@ public:
 	void					SetBackEndRenderer();			// sets tr.backEndRenderer based on cvars
 	void					RenderViewToViewport( const renderView_t *renderView, idScreenRect *viewport );
 
+	xthreadInfo				renderThread = {0};
+
+	bool					multithreadActive = false;
+
+	volatile bool			threadRun = false;
+	volatile bool			backendDone = true;
+
+	volatile bool			imagesDone = false;
+
+	volatile frameData_t	*fdToRender = NULL;
+	volatile int			vertListToRender = 0;
+
+	// The backend task
+	void					BackendThreadTask();
+
+	// The backend thread
+	void					BackendThread();
+
+	// Start (and create) the back thread
+	void					BackendThreadExecute();
+
+	// Wait for backend thread to finish
+	void					BackendThreadWait();
+
+	// Static runner to start thread
+	static int				BackendThreadRunner(void *localRenderSystem);
 public:
 	// renderer globals
 	bool					registered;		// cleared at shutdown, set at InitOpenGL
