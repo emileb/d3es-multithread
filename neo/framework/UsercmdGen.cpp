@@ -456,6 +456,7 @@ void idUsercmdGenLocal::InhibitUsercmd( inhibit_t subsystem, bool inhibit ) {
 	}
 }
 
+extern "C" int Android_GetButton( int key );
 /*
 ===============
 idUsercmdGenLocal::ButtonState
@@ -467,7 +468,8 @@ int	idUsercmdGenLocal::ButtonState( int key ) {
 	if ( key<0 || key>=UB_MAX_BUTTONS ) {
 		return -1;
 	}
-	return ( buttonState[key] > 0 ) ? 1 : 0;
+
+	return ( (buttonState[key] > 0) || Android_GetButton(key) ) ? 1 : 0;
 }
 
 /*
@@ -756,6 +758,8 @@ void idUsercmdGenLocal::InitCurrent( void ) {
 	cmd.buttons |= in_freeLook.GetBool() ? BUTTON_MLOOK : 0;
 }
 
+extern "C" void Android_GetMovement(int *forward, int *strafe);
+
 /*
 ================
 idUsercmdGenLocal::MakeCurrent
@@ -789,6 +793,11 @@ void idUsercmdGenLocal::MakeCurrent( void ) {
 
 		// get basic movement from joystick
 		JoystickMove();
+
+		int forward,strafe;
+		Android_GetMovement( &forward, &strafe );
+		cmd.rightmove = idMath::ClampChar( cmd.rightmove + strafe );
+		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + forward );
 
 		// check to make sure the angles haven't wrapped
 		if ( viewangles[PITCH] - oldAngles[PITCH] > 90 ) {
