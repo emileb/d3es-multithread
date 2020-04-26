@@ -321,13 +321,15 @@ enum {
 void				Sys_EnterCriticalSection( int index = CRITICAL_SECTION_ZERO );
 void				Sys_LeaveCriticalSection( int index = CRITICAL_SECTION_ZERO );
 
-const int MAX_TRIGGER_EVENTS		= 4;
+const int MAX_TRIGGER_EVENTS		= 6;
 
 enum {
 	TRIGGER_EVENT_ZERO = 0,
 	TRIGGER_EVENT_ONE,
 	TRIGGER_EVENT_TWO,
-	TRIGGER_EVENT_THREE
+	TRIGGER_EVENT_THREE,
+	TRIGGER_EVENT_RUN_BACKEND,
+	TRIGGER_EVENT_IMAGES_PROCESSES
 };
 
 void				Sys_WaitForEvent( int index = TRIGGER_EVENT_ZERO );
