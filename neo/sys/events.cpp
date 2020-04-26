@@ -441,9 +441,11 @@ sysEvent_t Sys_GetEvent() {
 					} // new context because visual studio complains about newmod and currentmod not initialized because of the case SDL_WINDOWEVENT_FOCUS_LOST
 
 					GLimp_GrabInput(GRAB_ENABLE | GRAB_REENABLE | GRAB_HIDECURSOR);
+					GLimp_WindowActive(true);
 					break;
 				case SDL_WINDOWEVENT_FOCUS_LOST:
 					GLimp_GrabInput(0);
+					GLimp_WindowActive(false);
 					break;
 			}
 

@@ -299,6 +299,8 @@ bool GLimp_Init(glimpParms_t parms) {
 		return false;
 	}
 
+	GLimp_WindowActive(true);
+
 	return true;
 }
 
@@ -416,6 +418,18 @@ GLExtension_t GLimp_ExtensionPointer(const char *name) {
 #endif
 
 	return (GLExtension_t)SDL_GL_GetProcAddress(name);
+}
+
+void GLimp_WindowActive(bool active)
+{
+	LOGI( "GLimp_WindowActive %d", active );
+	
+	tr.windowActive = active;
+
+	if(!active)
+	{
+		tr.BackendThreadShutdown();
+	}
 }
 
 void GLimp_GrabInput(int flags) {

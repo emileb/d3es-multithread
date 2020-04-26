@@ -721,10 +721,13 @@ public:
 	bool 					useSpinLock = true;
 	int						spinLockDelay = 1000;
 
+	bool					windowActive = false; // True when the app is at the foreground and not minimised
 
 	volatile bool			backendThreadRun = false;
 	volatile bool			backendFinished = true;
 	volatile bool			imagesFinished = false;
+
+	volatile bool			backendThreadShutdown = false;
 
 	volatile frameData_t	*fdToRender = NULL;
 	volatile int			vertListToRender = 0;
@@ -740,6 +743,8 @@ public:
 
 	// Wait for backend thread to finish
 	void					BackendThreadWait();
+
+	void					BackendThreadShutdown();
 
 	// Static runner to start thread
 	static int				BackendThreadRunner(void *localRenderSystem);
@@ -1063,6 +1068,9 @@ const int GRAB_HIDECURSOR	= (1 << 2);
 const int GRAB_SETSTATE		= (1 << 3);
 
 void GLimp_GrabInput(int flags);
+
+void GLimp_WindowActive(bool active);
+
 /*
 ====================================================================
 

@@ -642,7 +642,20 @@ void idRenderSystemLocal::BackendThread()
 			// LOGI("Done TRIGGER_EVENT_RUN_BACKEND");
 		}
 
-		BackendThreadTask();
+		// Thread will be woken up to either shutdown or render
+		if( backendThreadShutdown )
+		{
+			LOGI("Backend thread ending..");
+			// Release context
+			GLimp_DeactivateContext();
+
+			// Finish thread
+			break;
+		}
+		else
+		{
+			BackendThreadTask();
+		}
 	}
 }
 
@@ -688,7 +701,10 @@ void idRenderSystemLocal::BackendThreadExecute()
 	if(multithreadActive)
 	{
 		if ( !renderThread.threadHandle ) {
+			LOGI("Starting new backend thread");
+
 			GLimp_DeactivateContext();
+			backendThreadShutdown = false;
 			Sys_CreateThread( &idRenderSystemLocal::BackendThreadRunner, this, renderThread, "renderThread" );
 		}
 
@@ -709,6 +725,35 @@ void idRenderSystemLocal::BackendThreadExecute()
 	}
 }
 
+void idRenderSystemLocal::BackendThreadShutdown()
+{
+	LOGI("Shutting down backend thread");
+
+	if( multithreadActive && renderThread.threadHandle )
+	{
+		// Wait for thread to be ready
+		BackendThreadWait();
+		// Set shutdown flag
+		backendThreadShutdown = true;
+
+		// Start Thread
+		if( useSpinLock )
+		{
+			backendThreadRun = true;
+		}
+		else
+		{
+			// LOGI("Trigger TRIGGER_EVENT_RUN_BACKEND");
+			Sys_TriggerEvent(TRIGGER_EVENT_RUN_BACKEND);
+		}
+
+		// Join thread and wait until finished
+		Sys_DestroyThread(renderThread);
+
+		// Clear handle
+		renderThread.threadHandle = 0;
+	}
+}
 
 /*
 =============
@@ -749,30 +794,33 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	cmd = (emptyCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
 	cmd->commandId = RC_SWAP_BUFFERS;
 
-	//Wait for last backend rendering to finish
-	BackendThreadWait();
-
-	//Save the current vertexs and framedata to use for next render
-	vertListToRender = vertexCache.GetListNum();
-	fdToRender = frameData;
-
-	BackendThreadExecute();
-
-	// Wait for the backend to load any images, this only really happens at level load time
-	// Problem is image loading is not thread safe, hence the wait
-	if(useSpinLock)
+	// Only do rendering if the app is actually active
+	if(windowActive)
 	{
-		while(!imagesFinished)
+		//Wait for last backend rendering to finish
+		BackendThreadWait();
+
+		//Save the current vertexs and framedata to use for next render
+		vertListToRender = vertexCache.GetListNum();
+		fdToRender = frameData;
+
+		BackendThreadExecute();
+
+		// Wait for the backend to load any images, this only really happens at level load time
+		// Problem is image loading is not thread safe, hence the wait
+		if(useSpinLock)
 		{
-			if(spinLockDelay)
-				usleep(spinLockDelay);
+			while(!imagesFinished)
+			{
+				if(spinLockDelay)
+					usleep(spinLockDelay);
+			}
+		}
+		else
+		{
+			Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
 		}
 	}
-	else
-	{
-		Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
-	}
-
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers
 	R_ToggleSmpFrame();
