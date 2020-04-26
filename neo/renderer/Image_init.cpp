@@ -1911,7 +1911,7 @@ void idImageManager::AddAllocList( idImage * image )
 {
 	if(image)
 	{
-		LOGI("AddAllocList");
+		// LOGI("AddAllocList");
 		imagesAlloc.Append( image );
 	}
 }
@@ -1921,7 +1921,7 @@ void idImageManager::AddPurgeList( idImage * image )
 {
 	if(image)
 	{
-		LOGI("AddPurgeList");
+		// LOGI("AddPurgeList");
 		imagesPurge.Append( image );
 	}
 }
