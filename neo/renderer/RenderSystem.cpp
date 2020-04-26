@@ -622,16 +622,22 @@ void idRenderSystemLocal::BackendThreadWait()
 void idRenderSystemLocal::BackendThread()
 {
 	GLimp_ActivateContext();
-	
+
 	while( 1 )
 	{
 		//LOGI("Thread waiting..");
+	    LOGI("Wait TRIGGER_EVENT_RUN_BACKEND");
+		Sys_WaitForEvent(TRIGGER_EVENT_RUN_BACKEND);
+		LOGI("Done TRIGGER_EVENT_RUN_BACKEND");
 
+
+		/*
 		while(!threadRun)
 		{
 			usleep(500);
 		}
-		threadRun = false;
+		*/
+		//threadRun = false;
 
 		BackendThreadTask();
 	}
@@ -655,7 +661,9 @@ void idRenderSystemLocal::BackendThreadTask()
 		img->ActuallyLoadImage( false );
 	}
 
-	imagesDone = true;
+	//imagesDone = true;
+	// LOGI("Trigger TRIGGER_EVENT_IMAGES_PROCESSES");
+	Sys_TriggerEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
 
 	vertexCache.BeginBackEnd(vertListToRender);
 	R_IssueRenderCommands(fdToRender);
@@ -677,7 +685,9 @@ void idRenderSystemLocal::BackendThreadExecute()
 		}
 
 		// Start Thread
-		threadRun = true;
+		//threadRun = true;
+		// LOGI("Trigger TRIGGER_EVENT_RUN_BACKEND");
+		Sys_TriggerEvent(TRIGGER_EVENT_RUN_BACKEND);
 	}
 	else // No multithread, just execute in sequence
 	{
@@ -734,10 +744,15 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 
 	BackendThreadExecute();
 
+	// LOGI("Wait TRIGGER_EVENT_IMAGES_PROCESSES");
+	Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
+	// LOGI("DONE TRIGGER_EVENT_IMAGES_PROCESSES");
+/*
 	while(!imagesDone)
 	{
 		usleep(500);
 	}
+*/
 
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers
