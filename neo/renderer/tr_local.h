@@ -718,10 +718,13 @@ public:
 
 	bool					multithreadActive = false;
 
-	volatile bool			threadRun = false;
-	volatile bool			backendDone = true;
+	bool 					useSpinLock = true;
+	int						spinLockDelay = 1000;
 
-	volatile bool			imagesDone = false;
+
+	volatile bool			backendThreadRun = false;
+	volatile bool			backendFinished = true;
+	volatile bool			imagesFinished = false;
 
 	volatile frameData_t	*fdToRender = NULL;
 	volatile int			vertListToRender = 0;

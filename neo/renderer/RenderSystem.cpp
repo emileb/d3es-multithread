@@ -293,6 +293,8 @@ idRenderSystemLocal::idRenderSystemLocal
 idRenderSystemLocal::idRenderSystemLocal( void ) {
 	Clear();
 	multithreadActive = true;
+	useSpinLock = false;
+	spinLockDelay = 500;
 }
 
 /*
@@ -606,16 +608,15 @@ int idRenderSystemLocal::BackendThreadRunner(void *localRenderSystem)
 {
 	idRenderSystemLocal *local = (idRenderSystemLocal*)localRenderSystem;
 	local->BackendThread();
+
+	return 0;
 }
 
 void idRenderSystemLocal::BackendThreadWait()
 {
-	int n = 0;
-	while(!backendDone)
+	while(!backendFinished)
     {
-        //LOGI("Waiting for BG thread");
         usleep(500 * 1);
-        n++;
     }
 }
 
@@ -625,19 +626,21 @@ void idRenderSystemLocal::BackendThread()
 
 	while( 1 )
 	{
-		//LOGI("Thread waiting..");
-	    LOGI("Wait TRIGGER_EVENT_RUN_BACKEND");
-		Sys_WaitForEvent(TRIGGER_EVENT_RUN_BACKEND);
-		LOGI("Done TRIGGER_EVENT_RUN_BACKEND");
-
-
-		/*
-		while(!threadRun)
-		{
-			usleep(500);
+		if( useSpinLock )
+    	{
+			while(!backendThreadRun)
+			{
+				if(spinLockDelay)
+					usleep(spinLockDelay);
+			}
+			backendThreadRun = false;
+    	}
+    	else
+    	{
+			// LOGI("Wait TRIGGER_EVENT_RUN_BACKEND");
+			Sys_WaitForEvent(TRIGGER_EVENT_RUN_BACKEND);
+			// LOGI("Done TRIGGER_EVENT_RUN_BACKEND");
 		}
-		*/
-		//threadRun = false;
 
 		BackendThreadTask();
 	}
@@ -661,21 +664,26 @@ void idRenderSystemLocal::BackendThreadTask()
 		img->ActuallyLoadImage( false );
 	}
 
-	//imagesDone = true;
-	// LOGI("Trigger TRIGGER_EVENT_IMAGES_PROCESSES");
-	Sys_TriggerEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
+	if( useSpinLock )
+	{
+		imagesFinished = true;
+	}
+	else
+	{
+		Sys_TriggerEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
+	}
 
 	vertexCache.BeginBackEnd(vertListToRender);
 	R_IssueRenderCommands(fdToRender);
 
-	backendDone = true;
+	backendFinished = true;
 }
 
 void idRenderSystemLocal::BackendThreadExecute()
 {
 	//LOGI("BackendThreadRun called..");
-	imagesDone = false;
-	backendDone = false;
+	imagesFinished = false;
+	backendFinished = false;
 
 	if(multithreadActive)
 	{
@@ -685,9 +693,15 @@ void idRenderSystemLocal::BackendThreadExecute()
 		}
 
 		// Start Thread
-		//threadRun = true;
-		// LOGI("Trigger TRIGGER_EVENT_RUN_BACKEND");
-		Sys_TriggerEvent(TRIGGER_EVENT_RUN_BACKEND);
+		if( useSpinLock )
+		{
+			backendThreadRun = true;
+		}
+		else
+		{
+			// LOGI("Trigger TRIGGER_EVENT_RUN_BACKEND");
+			Sys_TriggerEvent(TRIGGER_EVENT_RUN_BACKEND);
+		}
 	}
 	else // No multithread, just execute in sequence
 	{
@@ -744,15 +758,20 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 
 	BackendThreadExecute();
 
-	// LOGI("Wait TRIGGER_EVENT_IMAGES_PROCESSES");
-	Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
-	// LOGI("DONE TRIGGER_EVENT_IMAGES_PROCESSES");
-/*
-	while(!imagesDone)
+	// Wait for the backend to load any images, this only really happens at level load time
+	// Problem is image loading is not thread safe, hence the wait
+	if(useSpinLock)
 	{
-		usleep(500);
+		while(!imagesFinished)
+		{
+			if(spinLockDelay)
+				usleep(spinLockDelay);
+		}
 	}
-*/
+	else
+	{
+		Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
+	}
 
 	// use the other buffers next frame, because another CPU
 	// may still be rendering into the current buffers
