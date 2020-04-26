@@ -33,7 +33,7 @@ LOCAL_CPPFLAGS += -DNO_LIGHT
 # Not avaliable in Android until N
 LOCAL_CFLAGS := -DIOAPI_NO_64
 
-LOCAL_CFLAGS += -fno-unsafe-math-optimizations -fno-strict-aliasing -fno-math-errno -fno-trapping-math  -fsigned-char
+LOCAL_CFLAGS += -fno-unsafe-math-optimizations -fno-strict-aliasing -fno-math-errno -fno-trapping-math  -fsigned-char -DUSE_LIBC_MALLOC=1
 
 
 
