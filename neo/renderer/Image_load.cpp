@@ -363,18 +363,24 @@ int etcavail(char* cachefname) {
 int uploadetc(char* cachefname,GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type) {
 	char* tmp;
 	int failed=0;
-	int sz=fileSystem->ReadFile(cachefname,(void**)&tmp,0);
+
+	if( !etcavail( cachefname ) )
+		return 1;
+
+	int sz = fileSystem->ReadFile(cachefname,(void**)&tmp,0);
+
+	if( sz == -1 )
+		return 1;
+
 	if (tmp[0]==0) {
 		if (sz==etc1_data_size(width,height)+1) {
-			tmp++;
-			qglCompressedTexImage2D(target,level,GL_ETC1_RGB8_OES,width,height,0,etc1_data_size(width,height),tmp);
+			qglCompressedTexImage2D(target,level,GL_ETC1_RGB8_OES,width,height,0,etc1_data_size(width,height),tmp + 1);
 		} else {
 			failed=1;
 		}
 	} else {
 		if (sz==width*height*2+1) {
-			tmp++;
-			qglTexImage2D(target,level,format,width,height,border,format,GL_UNSIGNED_SHORT_4_4_4_4,tmp);
+			qglTexImage2D(target,level,format,width,height,border,format,GL_UNSIGNED_SHORT_4_4_4_4,tmp + 1);
 		} else {
 			failed=1;
 		}
@@ -387,6 +393,9 @@ int uploadetc(char* cachefname,GLenum target, GLint level, GLint internalformat,
 
 void myglTexImage2D(char* cachefname,GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels) {
 	static int opaque = 0;
+
+	LOGI("myglTexImage2D, name = %s", cachefname );
+
 	if (r_useETC1.GetBool() && format == GL_RGBA && type == GL_UNSIGNED_BYTE) {
 
 		if (level == 0)
@@ -395,10 +404,18 @@ void myglTexImage2D(char* cachefname,GLenum target, GLint level, GLint internalf
 		if (!r_useETC1Cache.GetBool())
 			cachefname=0;
 
-		if (opaque)
-			etc1_compress_tex_image(cachefname,target, level, format, width, height, border, format, type, pixels);
+		if( uploadetc(cachefname, target, level, internalformat, width, height, border, format, type ) != 0 )
+		{
+			if (opaque)
+				etc1_compress_tex_image(cachefname,target, level, format, width, height, border, format, type, pixels);
+			else
+				rgba4444_convert_tex_image(cachefname,target, level, format, width, height, border, format, type, pixels);
+
+		}
 		else
-			rgba4444_convert_tex_image(cachefname,target, level, format, width, height, border, format, type, pixels);
+		{
+			LOGI("Loaded cached image from %s", cachefname);
+		}
 	} else {
 		qglTexImage2D(target,level,internalformat,width,height,border,format,type,pixels);
 	}
@@ -885,7 +902,7 @@ void	idImage::ActuallyLoadImage( bool fromBind ) {
 		// build a hash for checking duplicate image files
 		// NOTE: takes about 10% of image load times (SD)
 		// may not be strictly necessary, but some code uses it, so let's leave it in
-		imageHash = MD4_BlockChecksum( pic, width * height * 4 );
+		//imageHash = MD4_BlockChecksum( pic, width * height * 4 );
 
 		GenerateImage( pic, width, height, filter, allowDownSize, repeat, depth );
 		timestamp = timestamp;
