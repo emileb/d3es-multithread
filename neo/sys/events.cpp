@@ -688,7 +688,7 @@ void Sys_ClearEvents() {
 	mouse_polls.SetNum(0, false);
 }
 
-extern "C" void Android_PumpEvents();
+extern "C" 	const char * Android_GetCommand();
 /*
 ================
 Sys_GenerateEvents
@@ -700,9 +700,17 @@ void Sys_GenerateEvents() {
 	if (s)
 		PushConsoleEvent(s);
 
+	const char * cmd = Android_GetCommand();
+	if(cmd)
+	{
+		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, cmd );
+		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "\n" );
+	}
+
+
 	SDL_PumpEvents();
 
-	Android_PumpEvents();
+
 }
 
 /*

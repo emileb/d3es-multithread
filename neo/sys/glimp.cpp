@@ -423,7 +423,7 @@ GLExtension_t GLimp_ExtensionPointer(const char *name) {
 void GLimp_WindowActive(bool active)
 {
 	LOGI( "GLimp_WindowActive %d", active );
-	
+
 	tr.windowActive = active;
 
 	if(!active)

@@ -2383,6 +2383,9 @@ void idCommonLocal::InitSIMD( void ) {
 	com_forceGenericSIMD.ClearModified();
 }
 
+
+extern "C" void Android_PumpEvents(int screen);
+
 /*
 =================
 idCommonLocal::Frame
@@ -2393,6 +2396,9 @@ void idCommonLocal::Frame( void ) {
 
 		// pump all the events
 		Sys_GenerateEvents();
+
+		int inMenu = (((idSessionLocal*)session)->guiActive != 0);
+		Android_PumpEvents(inMenu);
 
 		// write config file if anything changed
 		WriteConfiguration();

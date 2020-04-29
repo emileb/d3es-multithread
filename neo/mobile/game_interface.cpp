@@ -11,6 +11,17 @@ extern "C"
 #include "SDL.h"
 #include "SDL_keycode.h"
 
+#define ACTION_DOWN 0
+#define ACTION_UP 1
+#define ACTION_MOVE 2
+#define ACTION_MOVE_REL 3
+#define ACTION_HOVER_MOVE 7
+#define ACTION_SCROLL 8
+#define BUTTON_PRIMARY 1
+#define BUTTON_SECONDARY 2
+#define BUTTON_TERTIARY 4
+#define BUTTON_BACK 8
+#define BUTTON_FORWARD 16
 
 static char* consoleCmd = NULL;
 
@@ -241,10 +252,6 @@ void PortableAction(int state, int action)
 	}
 }
 
-int Android_GetButton( int key )
-{
-	return cmdButtons[key];
-}
 
 // =================== FORWARD and SIDE MOVMENT ==============
 
@@ -321,20 +328,32 @@ void PortableInit(int argc,const char ** argv){
 }
 
 
-static float am_zoom = 0;
-static float am_pan_x = 0;
-static float am_pan_y = 0;
+void PortableMouse(float dx,float dy)
+{
+    //LOGI("%f %f",dx,dy);
+    Android_OnMouse(0, ACTION_MOVE_REL, -dx * 3000, -dy * 1200);
+}
+
+void PortableMouseButton(int state, int button, float dx,float dy)
+{
+    if( state )
+        Android_OnMouse(BUTTON_PRIMARY, ACTION_DOWN, 0, 0);
+    else
+        Android_OnMouse(BUTTON_PRIMARY, ACTION_UP,0, 0);
+}
+
 
 void PortableAutomapControl(float zoom, float x, float y)
 {
-	am_zoom += zoom;
-	am_pan_x += x;
-	am_pan_y += y;
 }
 
+static int inMenu = 0;
 touchscreemode_t PortableGetScreenMode()
 {
-	return TS_GAME;
+	if(inMenu)
+		return TS_MENU;
+	else
+		return TS_GAME;
 }
 
 int PortableShowKeyboard(void)
@@ -342,28 +361,42 @@ int PortableShowKeyboard(void)
 	return 0;
 }
 
-#define ACTION_DOWN 0
-#define ACTION_UP 1
-#define ACTION_MOVE 2
-#define ACTION_MOVE_REL 3
-#define ACTION_HOVER_MOVE 7
-#define ACTION_SCROLL 8
-#define BUTTON_PRIMARY 1
-#define BUTTON_SECONDARY 2
-#define BUTTON_TERTIARY 4
-#define BUTTON_BACK 8
-#define BUTTON_FORWARD 16
 
-void Android_PumpEvents()
+
+int Android_GetButton( int key )
 {
-   Android_OnMouse(0, ACTION_MOVE_REL, -look_yaw_mouse * 3000, -look_pitch_mouse * 1200);
-   look_yaw_mouse = 0;
-   look_pitch_mouse = 0;
+	return cmdButtons[key];
+}
+
+const char * Android_GetCommand()
+{
+	// Potential race condition here to miss a command, however extremely unlikely to happen
+	const char *cmd = cmd_to_run;
+	cmd_to_run = NULL;
+	return cmd;
+}
+
+void Android_PumpEvents(int screen)
+{
+	inMenu = screen;
+	Android_OnMouse(0, ACTION_MOVE_REL, -look_yaw_mouse * 3000, -look_pitch_mouse * 1200);
+
+    look_yaw_mouse = 0;
+    look_pitch_mouse = 0;
 }
 
 
 void Android_GetMovement(int *forward, int *strafe)
 {
+	if(abs(forwardmove_android) >= 1)
+	{
+		buttonChange(1,UB_SPEED);
+	}
+	else
+	{
+		buttonChange(0,UB_SPEED);
+	}
+
 	*forward = forwardmove_android * 127.0;
 	*strafe = sidemove_android * 127.0;
 }
