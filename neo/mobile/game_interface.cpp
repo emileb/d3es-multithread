@@ -48,10 +48,17 @@ void PortableBackButton()
     PortableKeyEvent(0, SDL_SCANCODE_ESCAPE, 0);
 }
 
-const char *cmd_to_run = NULL;
+static const char *cmd_to_run = NULL;
 void PortableCommand(const char * cmd)
 {
 	cmd_to_run = cmd;
+}
+
+// Can only set one impulse per frame, this should be fine
+static int nextImpulse = 0;
+static void SetImpuse(int impulse)
+{
+	nextImpulse = impulse;
 }
 
 typedef enum {
@@ -205,9 +212,6 @@ void PortableAction(int state, int action)
         case PORT_ACT_MOVE_RIGHT:
             buttonChange(state,UB_MOVERIGHT);
             break;
-        case PORT_ACT_USE:
-
-            break;
         case PORT_ACT_ATTACK:
             buttonChange(state,UB_ATTACK);
             break;
@@ -228,16 +232,64 @@ void PortableAction(int state, int action)
             break;
         case PORT_ACT_NEXT_WEP:
             if (state)
-                PortableCommand("weapnext");
+				SetImpuse(UB_IMPULSE14);
             break;
         case PORT_ACT_PREV_WEP:
             if (state)
-                PortableCommand("weapprev");
+                SetImpuse(UB_IMPULSE15);
             break;
-        case PORT_ACT_MAP:
+        case PORT_ACT_RELOAD:
             if (state)
-                PortableCommand("togglemap");
+                SetImpuse(UB_IMPULSE13);
             break;
+      	case PORT_ACT_WEAP0:
+            if (state)
+                SetImpuse(UB_IMPULSE0);
+            break;
+        case PORT_ACT_WEAP1:
+            if (state)
+                SetImpuse(UB_IMPULSE1);
+            break;
+        case PORT_ACT_WEAP2:
+            if (state)
+                SetImpuse(UB_IMPULSE2);
+            break;
+        case PORT_ACT_WEAP3:
+            if (state)
+                SetImpuse(UB_IMPULSE3);
+            break;
+        case PORT_ACT_WEAP4:
+            if (state)
+                SetImpuse(UB_IMPULSE4);
+            break;
+        case PORT_ACT_WEAP5:
+            if (state)
+                SetImpuse(UB_IMPULSE5);
+            break;
+        case PORT_ACT_WEAP6:
+            if (state)
+                SetImpuse(UB_IMPULSE6);
+            break;
+        case PORT_ACT_WEAP7:
+            if (state)
+                SetImpuse(UB_IMPULSE7);
+            break;
+        case PORT_ACT_WEAP8:
+            if (state)
+                SetImpuse(UB_IMPULSE8);
+            break;
+        case PORT_ACT_WEAP9:
+            if (state)
+                SetImpuse(UB_IMPULSE9);
+            break;
+		case PORT_ACT_FLASH_LIGHT:
+			if (state)
+				SetImpuse(UB_IMPULSE11);
+			break;
+		case PORT_ACT_HELPCOMP:
+			if (state)
+				SetImpuse(UB_IMPULSE19);
+			break;
         case PORT_ACT_QUICKLOAD:
 			PortableKeyEvent(state,SDL_SCANCODE_F9, 0);
             break;
@@ -368,6 +420,13 @@ int Android_GetButton( int key )
 	return cmdButtons[key];
 }
 
+int Android_GetNextImpulse()
+{
+	int impulse = nextImpulse;
+	nextImpulse = 0;
+	return impulse;
+}
+
 const char * Android_GetCommand()
 {
 	// Potential race condition here to miss a command, however extremely unlikely to happen
@@ -379,15 +438,24 @@ const char * Android_GetCommand()
 void Android_PumpEvents(int screen)
 {
 	inMenu = screen;
+	/*
+	int x =  -look_yaw_mouse * 3000;
+	int y = -look_pitch_mouse * 1200;
+
 	Android_OnMouse(0, ACTION_MOVE_REL, -look_yaw_mouse * 3000, -look_pitch_mouse * 1200);
 
     look_yaw_mouse = 0;
     look_pitch_mouse = 0;
+    */
 }
 
+extern "C" int blockGamepad( void );
 
-void Android_GetMovement(int *forward, int *strafe)
+void Android_GetMovement(int frameTime, int *forward, int *strafe, float *yaw, float *pitch)
 {
+
+	//LOGI("Android_GetMovement frameTime = %d", frameTime);
+	
 	if(abs(forwardmove_android) >= 1)
 	{
 		buttonChange(1,UB_SPEED);
@@ -397,8 +465,28 @@ void Android_GetMovement(int *forward, int *strafe)
 		buttonChange(0,UB_SPEED);
 	}
 
-	*forward = forwardmove_android * 127.0;
-	*strafe = sidemove_android * 127.0;
+    int blockMove = blockGamepad() & ANALOGUE_AXIS_FWD;
+    int blockLook = blockGamepad() & ANALOGUE_AXIS_PITCH;
+
+
+    if( !blockMove )
+    {
+	    *forward = forwardmove_android * 127.0;
+		*strafe = sidemove_android * 127.0;
+    }
+
+    if( !blockLook )
+    {
+        // Add pitch
+        *pitch += -look_pitch_mouse * 300;
+        look_pitch_mouse = 0;
+        *pitch += (look_pitch_joy * frameTime) / 3;
+
+        // Add yaw
+        *yaw += look_yaw_mouse * 1000;
+        look_yaw_mouse = 0;
+        *yaw += (look_yaw_joy * frameTime) / 2;
+    }
 }
 
 }

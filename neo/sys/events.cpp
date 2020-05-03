@@ -703,14 +703,12 @@ void Sys_GenerateEvents() {
 	const char * cmd = Android_GetCommand();
 	if(cmd)
 	{
-		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, cmd );
-		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "\n" );
+		cmdSystem->BufferCommandText( CMD_EXEC_NOW, cmd );
+		//cmdSystem->BufferCommandText( CMD_EXEC_NOW, "\n" );
 	}
 
 
 	SDL_PumpEvents();
-
-
 }
 
 /*

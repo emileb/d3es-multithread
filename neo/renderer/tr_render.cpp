@@ -38,6 +38,8 @@ If you have questions concerning this license or the applicable additional terms
 
 */
 
+float RB_overbright = 1;
+
 /*
 ================
 RB_DrawElementsWithCounters
@@ -291,6 +293,10 @@ void RB_SubmittInteraction( drawInteraction_t *din, void (*DrawInteraction)(cons
 	    || ( ( din->specularColor[0] > 0 ||
 	           din->specularColor[1] > 0 ||
 	           din->specularColor[2] > 0 ) && din->specularImage != globalImages->blackImage ) ) {
+
+	            din->diffuseColor[0] *= RB_overbright;
+	            din->diffuseColor[1] *= RB_overbright;
+	            din->diffuseColor[2] *= RB_overbright;
 		DrawInteraction( din );
 	}
 }

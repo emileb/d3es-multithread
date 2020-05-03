@@ -524,12 +524,12 @@ void  idVertexCache::BeginBackEnd(int which)
 	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
 	currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
 	qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory);
-	//qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index, tempIndexBuffers[listNum]->frontEndMemory,GL_STATIC_DRAW);
+	//qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory,GL_STATIC_DRAW);
 
 	qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[which]->vbo);
 	currentBoundVBO = tempBuffers[which]->vbo;
 	qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory);
-	//qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame, tempBuffers[listNum]->frontEndMemory,GL_STATIC_DRAW);
+	//qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory,GL_STATIC_DRAW);
 
 }
 

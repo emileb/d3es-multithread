@@ -77,7 +77,7 @@ idCVar r_finish( "r_finish", "0", CVAR_RENDERER | CVAR_BOOL, "force a call to gl
 idCVar r_swapInterval( "r_swapInterval", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "changes the GL swap interval" );
 
 idCVar r_gamma( "r_gamma", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "changes gamma tables", 0.5f, 3.0f );
-idCVar r_brightness( "r_brightness", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "changes gamma tables", 0.5f, 2.0f );
+idCVar r_brightness( "r_brightness", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_FLOAT, "changes gamma tables", 0.5f, 3.0f );
 
 idCVar r_jitter( "r_jitter", "0", CVAR_RENDERER | CVAR_BOOL, "randomly subpixel jitter the projection matrix" );
 
@@ -199,6 +199,9 @@ idCVar r_debugRenderToTexture( "r_debugRenderToTexture", "0", CVAR_RENDERER | CV
 
 // DG: let users disable the "scale menus to 4:3" hack
 idCVar r_scaleMenusTo43( "r_scaleMenusTo43", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "Scale menus, fullscreen videos and PDA to 4:3 aspect ratio" );
+
+
+idCVar r_multithread("r_multithread", "1", CVAR_RENDERER | CVAR_BOOL, "Multithread backend");
 
 idCVar r_noLight("r_noLight", "0", CVAR_RENDERER | CVAR_BOOL, "lighting disable hack");
 idCVar r_useETC1("r_useETC1", "0", CVAR_RENDERER | CVAR_BOOL, "use ETC1 compression");
@@ -1293,43 +1296,16 @@ void R_SampleCubeMap( const idVec3 &dir, int size, byte *buffers[6], byte result
 
 //============================================================================
 
-
+extern float RB_overbright;
 /*
 ===============
 R_SetColorMappings
 ===============
 */
 void R_SetColorMappings( void ) {
-	int		i, j;
-	float	g, b;
-	int		inf;
-	unsigned short gammaTable[256];
 
-	b = r_brightness.GetFloat();
-	g = r_gamma.GetFloat();
-
-	for ( i = 0; i < 256; i++ ) {
-		j = i * b;
-		if (j > 255) {
-			j = 255;
-		}
-
-		if ( g == 1 ) {
-			inf = (j<<8) | j;
-		} else {
-			inf = 0xffff * pow ( j/255.0f, 1.0f / g ) + 0.5f;
-		}
-		if (inf < 0) {
-			inf = 0;
-		}
-		if (inf > 0xffff) {
-			inf = 0xffff;
-		}
-
-		gammaTable[i] = inf;
-	}
-
-	GLimp_SetGamma( gammaTable, gammaTable, gammaTable );
+	RB_overbright = r_brightness.GetFloat() * 2;
+	LOGI("RB_overbright = %f",RB_overbright);
 }
 
 
@@ -1622,6 +1598,10 @@ void idRenderSystemLocal::Init( void ) {
 	viewCount = 1;		// so cleared structures never match viewCount
 	// we used to memset tr, but now that it is a class, we can't, so
 	// there may be other state we need to reset
+
+	multithreadActive = r_multithread.GetBool();
+	useSpinLock = false;
+	spinLockDelay = 500;
 
 	ambientLightVector[0] = 0.5f;
 	ambientLightVector[1] = 0.5f - 0.385f;

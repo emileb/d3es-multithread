@@ -394,7 +394,7 @@ int uploadetc(char* cachefname,GLenum target, GLint level, GLint internalformat,
 void myglTexImage2D(char* cachefname,GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels) {
 	static int opaque = 0;
 
-	LOGI("myglTexImage2D, name = %s", cachefname );
+	// LOGI("myglTexImage2D, name = %s", cachefname );
 
 	if (r_useETC1.GetBool() && format == GL_RGBA && type == GL_UNSIGNED_BYTE) {
 

@@ -758,7 +758,7 @@ void idUsercmdGenLocal::InitCurrent( void ) {
 	cmd.buttons |= in_freeLook.GetBool() ? BUTTON_MLOOK : 0;
 }
 
-extern "C" void Android_GetMovement(int *forward, int *strafe);
+extern "C" void Android_GetMovement(int frameTime, int *forward, int *strafe, float *yaw, float *pitch);
 
 /*
 ================
@@ -795,9 +795,21 @@ void idUsercmdGenLocal::MakeCurrent( void ) {
 		JoystickMove();
 
 		int forward,strafe;
-		Android_GetMovement( &forward, &strafe );
+		float yaw = 0;
+		float pitch = 0;
+
+		static int previous = 0;
+		int t = Sys_Milliseconds();
+       	int frameTime = t - previous;
+       	previous = t;
+		if(frameTime > 100)
+			frameTime = 100;
+
+		Android_GetMovement( frameTime, &forward, &strafe, &yaw, &pitch );
 		cmd.rightmove = idMath::ClampChar( cmd.rightmove + strafe );
 		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + forward );
+		viewangles[YAW] += yaw;
+		viewangles[PITCH] += pitch;
 
 		// check to make sure the angles haven't wrapped
 		if ( viewangles[PITCH] - oldAngles[PITCH] > 90 ) {
@@ -1097,6 +1109,8 @@ void idUsercmdGenLocal::MouseState( int *x, int *y, int *button, bool *down ) {
 	*down = mouseDown;
 }
 
+extern "C" int Android_GetNextImpulse();
+
 /*
 ================
 idUsercmdGenLocal::GetDirectUsercmd
@@ -1115,6 +1129,17 @@ usercmd_t idUsercmdGenLocal::GetDirectUsercmd( void ) {
 
 	// process the system joystick events
 	Joystick();
+
+	int imp = Android_GetNextImpulse();
+	if( imp )
+	{
+		if ( !Inhibited()  ) {
+			if ( imp >= UB_IMPULSE0 && imp <= UB_IMPULSE61 ) {
+				cmd.impulse = imp - UB_IMPULSE0;
+				cmd.flags ^= UCF_IMPULSE_SEQUENCE;
+			}
+		}
+	}
 
 	// create the usercmd
 	MakeCurrent();

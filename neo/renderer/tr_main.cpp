@@ -909,6 +909,7 @@ void R_SetupProjection( void ) {
 	float	xmin, xmax, ymin, ymax;
 	float	width, height;
 	float	zNear;
+	float   zFar;
 	float	jitterx, jittery;
 	static	idRandom random;
 
@@ -925,10 +926,17 @@ void R_SetupProjection( void ) {
 	//
 	// set up projection matrix
 	//
+#if Z_HACK
+	zNear = 8;
+#else
 	zNear	= r_znear.GetFloat();
+#endif
+
 	if ( tr.viewDef->renderView.cramZNear ) {
 		zNear *= 0.25;
 	}
+
+	zFar = 4000;
 
 	ymax = zNear * tan( tr.viewDef->renderView.fov_y * idMath::PI / 360.0f );
 	ymin = -ymax;
@@ -961,8 +969,13 @@ void R_SetupProjection( void ) {
 	// rasterize right at the wraparound point
 	tr.viewDef->projectionMatrix[2] = 0;
 	tr.viewDef->projectionMatrix[6] = 0;
+#if Z_HACK
+	tr.viewDef->projectionMatrix[10] = (-zFar-zNear)/(zFar-zNear);//-0.999f;
+	tr.viewDef->projectionMatrix[14] = -2.0f*zFar*zNear/(zFar-zNear);
+#else
 	tr.viewDef->projectionMatrix[10] = -0.999f;
 	tr.viewDef->projectionMatrix[14] = -2.0f * zNear;
+#endif
 
 	tr.viewDef->projectionMatrix[3] = 0;
 	tr.viewDef->projectionMatrix[7] = 0;

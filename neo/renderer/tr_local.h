@@ -954,10 +954,12 @@ extern idCVar r_debugPolygonFilled;
 extern idCVar r_materialOverride;		// override all materials
 
 extern idCVar r_debugRenderToTexture;
-#
+
+
+extern idCVar r_multithread;			// enable multithread
 extern idCVar r_noLight;				// no lighting
 extern idCVar r_useETC1;				// ETC1 compression
-extern idCVar r_useETC1Cache;				// use ETC1 cache
+extern idCVar r_useETC1Cache;			// use ETC1 cache
 /*
 ====================================================================
 

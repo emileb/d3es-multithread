@@ -292,9 +292,6 @@ idRenderSystemLocal::idRenderSystemLocal
 */
 idRenderSystemLocal::idRenderSystemLocal( void ) {
 	Clear();
-	multithreadActive = true;
-	useSpinLock = false;
-	spinLockDelay = 500;
 }
 
 /*
@@ -673,7 +670,7 @@ void idRenderSystemLocal::BackendThreadTask()
 	// Load all images
 	while( (img = globalImages->GetNextAllocImage()) != NULL )
 	{
-		LOGI("IMAGE LOAD!");
+		// LOGI("IMAGE LOAD!");
 		img->ActuallyLoadImage( false );
 	}
 
@@ -799,6 +796,18 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	{
 		//Wait for last backend rendering to finish
 		BackendThreadWait();
+
+		// We have turned off multithreading, we need to shut it down
+		if(multithreadActive && !r_multithread.GetBool())
+		{
+			BackendThreadShutdown();
+			GLimp_ActivateContext();
+			multithreadActive = false;
+		}
+		else if( !multithreadActive && r_multithread.GetBool() )
+		{
+			multithreadActive = true;
+		}
 
 		//Save the current vertexs and framedata to use for next render
 		vertListToRender = vertexCache.GetListNum();
