@@ -388,6 +388,10 @@ void PortableMouse(float dx,float dy)
 
 void PortableMouseButton(int state, int button, float dx,float dy)
 {
+	LOGI("PortableMouseButton %d", state);
+
+	//PortableAction(state, PORT_ACT_ATTACK);
+	//return;
     if( state )
         Android_OnMouse(BUTTON_PRIMARY, ACTION_DOWN, 0, 0);
     else
@@ -399,10 +403,13 @@ void PortableAutomapControl(float zoom, float x, float y)
 {
 }
 
-static int inMenu = 0;
+bool inMenu = false;
+bool inGameGuiActive = false;
+bool objectiveSystemActive = false;
+
 touchscreemode_t PortableGetScreenMode()
 {
-	if(inMenu)
+	if(inMenu || objectiveSystemActive)
 		return TS_MENU;
 	else
 		return TS_GAME;
@@ -437,16 +444,9 @@ const char * Android_GetCommand()
 
 void Android_PumpEvents(int screen)
 {
-	inMenu = screen;
-	/*
-	int x =  -look_yaw_mouse * 3000;
-	int y = -look_pitch_mouse * 1200;
-
-	Android_OnMouse(0, ACTION_MOVE_REL, -look_yaw_mouse * 3000, -look_pitch_mouse * 1200);
-
-    look_yaw_mouse = 0;
-    look_pitch_mouse = 0;
-    */
+	inMenu = screen & 0x1;
+	inGameGuiActive = !!(screen & 0x2);
+	objectiveSystemActive = !!(screen & 0x4);
 }
 
 extern "C" int blockGamepad( void );
@@ -455,7 +455,7 @@ void Android_GetMovement(int frameTime, int *forward, int *strafe, float *yaw, f
 {
 
 	//LOGI("Android_GetMovement frameTime = %d", frameTime);
-	
+
 	if(abs(forwardmove_android) >= 1)
 	{
 		buttonChange(1,UB_SPEED);
@@ -475,17 +475,18 @@ void Android_GetMovement(int frameTime, int *forward, int *strafe, float *yaw, f
 		*strafe = sidemove_android * 127.0;
     }
 
-    if( !blockLook )
+	float lookScale = inGameGuiActive ? 0.3 : 1;
+    if( !blockLook  && !(inMenu || objectiveSystemActive))
     {
         // Add pitch
-        *pitch += -look_pitch_mouse * 300;
+        *pitch += (-look_pitch_mouse * 300) * lookScale;
         look_pitch_mouse = 0;
-        *pitch += (look_pitch_joy * frameTime) / 3;
+        *pitch += (look_pitch_joy * frameTime) * lookScale / 3;
 
         // Add yaw
-        *yaw += look_yaw_mouse * 1000;
+        *yaw += (look_yaw_mouse * 1000) * lookScale;
         look_yaw_mouse = 0;
-        *yaw += (look_yaw_joy * frameTime) / 2;
+        *yaw += (look_yaw_joy * frameTime) * lookScale / 2;
     }
 }
 

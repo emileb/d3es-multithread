@@ -196,6 +196,10 @@ public:
 	virtual bool				DownloadRequest( const char *IP, const char *guid, const char *paks, char urls[ MAX_STRING_CHARS ] ) = 0;
 
 	virtual void				GetMapLoadingGUI( char gui[ MAX_STRING_CHARS ] ) = 0;
+
+	// Added by Emile
+	virtual bool				InGameGuiActive() = 0;
+	virtual bool			    ObjectiveSystemActive() = 0;
 };
 
 extern idGame *					game;
