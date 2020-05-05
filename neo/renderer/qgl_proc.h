@@ -163,9 +163,9 @@ QGLPROC(glVertexAttrib4fv, void, (GLuint index, const GLfloat *v))
 QGLPROC(glVertexAttribPointer, void, (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer))
 QGLPROC(glViewport, void, (GLint x, GLint y, GLsizei width, GLsizei height))
 
-//QGLPROC(glMapBufferRange, void*, (GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access))
+QGLPROC(glMapBufferRange, void*, (GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access))
 //QGLPROC(glMapBuffer, void*, (GLenum target, GLenum access))
-//QGLPROC(glUnmapBuffer, GLboolean,(GLenum target))
+QGLPROC(glUnmapBuffer, GLboolean,(GLenum target))
 
 
 #undef QGLPROC

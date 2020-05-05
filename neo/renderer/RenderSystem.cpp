@@ -674,6 +674,8 @@ void idRenderSystemLocal::BackendThreadTask()
 		img->ActuallyLoadImage( false );
 	}
 
+	vertexCache.BeginBackEnd(vertListToRender);
+
 	if( useSpinLock )
 	{
 		imagesFinished = true;
@@ -683,7 +685,7 @@ void idRenderSystemLocal::BackendThreadTask()
 		Sys_TriggerEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
 	}
 
-	vertexCache.BeginBackEnd(vertListToRender);
+
 	R_IssueRenderCommands(fdToRender);
 
 	backendFinished = true;
@@ -796,6 +798,8 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	{
 		//Wait for last backend rendering to finish
 		BackendThreadWait();
+
+		// LOGI("---------------------NEW FRAME---------------------");
 
 		// We have turned off multithreading, we need to shut it down
 		if(multithreadActive && !r_multithread.GetBool())

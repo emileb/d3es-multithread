@@ -43,6 +43,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "renderer/VertexCache.h"
 
+#define USE_MAP false
+
 static const int	FRAME_MEMORY_BYTES = 0x200000;
 static const int	EXPAND_HEADERS = 1024;
 
@@ -82,6 +84,14 @@ void idVertexCache::ActuallyFree(vertCache_t* block) {
 		staticCountTotal--;
 	}
 	block->tag = TAG_FREE;		// mark as free
+
+	if(block->frontEndMemory)
+	{
+		free(block->frontEndMemory);
+		block->frontEndMemory = NULL;
+	}
+
+	block->frontEndMemoryDirty = false;
 
 	// unlink stick it back on the free list
 	block->next->prev = block->prev;
@@ -143,6 +153,7 @@ void* idVertexCache::Position(vertCache_t* buffer) {
 
 	// Update any new data
 	if (buffer->frontEndMemoryDirty){
+		//LOGI("Uploading Static vertex");
 		if (buffer->indexBuffer) {
             qglBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer->size, buffer->frontEndMemory, GL_STATIC_DRAW);
         } else {
@@ -242,19 +253,22 @@ vertCache_t* idVertexCache::CreateTempVbo(int bytes, bool indexBuffer)
 	block->indexBuffer = indexBuffer;
 	block->frontEndMemoryDirty = false;
 
+#if USE_MAP
+#else
 	block->frontEndMemory = malloc(bytes + 16 );
+#endif
 
 	qglGenBuffers(1, &block->vbo);
 
 	if (indexBuffer) {
 	    qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, block->vbo);
 	    currentBoundVBO_Index = block->vbo;
-	    qglBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_STREAM_DRAW);
+	    qglBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_DYNAMIC_DRAW);
 	}
 	else{
 	    qglBindBuffer(GL_ARRAY_BUFFER, block->vbo);
 	    currentBoundVBO = block->vbo;
-	    qglBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_STREAM_DRAW);
+	    qglBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_DYNAMIC_DRAW);
 	}
 
 	return block;
@@ -268,6 +282,7 @@ idVertexCache::Alloc
 */
 void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool indexBuffer) {
 	vertCache_t* block;
+//LOGI("ALLOC STATIC %d", staticCountTotal);
 
 	if (size <= 0) {
 		common->Error("idVertexCache::Alloc: size = %i\n", size);
@@ -325,13 +340,27 @@ void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool index
 
 	block->indexBuffer = indexBuffer;
 
-    block->size = size;
+
 
 	// TODO, make this more efficient...
+#if 0
+	if( block->frontEndMemory && size < block->size)
+	{
+
+	}
+	else
+	{
+		free(block->frontEndMemory);
+		block->frontEndMemory = malloc(size + 16);
+		block->size = size;
+	}
+#else
 	if( block->frontEndMemory )
 		free(block->frontEndMemory);
-
 	block->frontEndMemory = malloc(size + 16);
+	block->size = size;
+#endif
+
 	memcpy( block->frontEndMemory, data, size );
 	block->frontEndMemoryDirty = true;
 
@@ -517,20 +546,42 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 	return block;
 }
 
+#define GL_MAP_INVALIDATE_BUFFER_BIT 0x0008
+#define GL_MAP_INVALIDATE_RANGE_BIT 0x0004
+#define GL_MAP_UNSYNCHRONIZED_BIT 0x0020
+#define GL_MAP_WRITE_BIT 0x0002
 void  idVertexCache::BeginBackEnd(int which)
 {
 //LOGI("BeginBackEnd list = %d, size index = %d, size = %d", listNum,dynamicAllocThisFrame_Index,dynamicAllocThisFrame);
-
 	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
 	currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
+#if USE_MAP
+	qglUnmapBuffer( GL_ELEMENT_ARRAY_BUFFER );
+
+	currentBoundVBO_Index =   tempIndexBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->vbo;
+	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,currentBoundVBO_Index );
+	tempIndexBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->frontEndMemory = qglMapBufferRange( GL_ELEMENT_ARRAY_BUFFER, 0, FRAME_MEMORY_BYTES, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT );
+#else
 	qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory);
 	//qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory,GL_STATIC_DRAW);
+#endif
+
+
+
+
 
 	qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[which]->vbo);
 	currentBoundVBO = tempBuffers[which]->vbo;
+#if USE_MAP
+	qglUnmapBuffer( GL_ARRAY_BUFFER );
+	currentBoundVBO = tempBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->vbo;
+
+	qglBindBuffer(GL_ARRAY_BUFFER, currentBoundVBO);
+	tempBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->frontEndMemory = qglMapBufferRange( GL_ARRAY_BUFFER, 0, FRAME_MEMORY_BYTES, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT );
+#else
 	qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory);
 	//qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory,GL_STATIC_DRAW);
-
+#endif
 }
 
 /*
@@ -577,7 +628,6 @@ void idVertexCache::EndFrame() {
 
 	}
 #endif
-void waitBackend();
 
 
 	currentFrame = tr.frameCount;

@@ -205,7 +205,7 @@ idCVar r_multithread("r_multithread", "1", CVAR_RENDERER | CVAR_BOOL, "Multithre
 
 idCVar r_noLight("r_noLight", "0", CVAR_RENDERER | CVAR_BOOL, "lighting disable hack");
 idCVar r_useETC1("r_useETC1", "0", CVAR_RENDERER | CVAR_BOOL, "use ETC1 compression");
-idCVar r_useETC1Cache("r_useETC1cache", "1", CVAR_RENDERER | CVAR_BOOL, "cache ETC1 data");
+idCVar r_useETC1Cache("r_useETC1cache", "0", CVAR_RENDERER | CVAR_BOOL, "cache ETC1 data");
 
 // define qgl functions
 #define QGLPROC(name, rettype, args) rettype (GL_APIENTRYP q##name) args;
@@ -497,6 +497,9 @@ void R_InitOpenGL( void ) {
 
 	// allocate the frame data, which may be more if smp is enabled
 	R_InitFrameData();
+
+	vertexCache.BeginBackEnd(vertexCache.GetListNum()+1);
+	vertexCache.EndFrame();
 
 	// Reset our gamma
 	R_SetColorMappings();
@@ -1304,7 +1307,9 @@ R_SetColorMappings
 */
 void R_SetColorMappings( void ) {
 
-	RB_overbright = r_brightness.GetFloat() * 2;
+	RB_overbright = (r_brightness.GetFloat() * 2) - 1;
+	if( RB_overbright < 1 )
+		RB_overbright = 1;
 	LOGI("RB_overbright = %f",RB_overbright);
 }
 
