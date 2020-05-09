@@ -263,12 +263,12 @@ vertCache_t* idVertexCache::CreateTempVbo(int bytes, bool indexBuffer)
 	if (indexBuffer) {
 	    qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, block->vbo);
 	    currentBoundVBO_Index = block->vbo;
-	    qglBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_DYNAMIC_DRAW);
+	    qglBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_STREAM_DRAW);
 	}
 	else{
 	    qglBindBuffer(GL_ARRAY_BUFFER, block->vbo);
 	    currentBoundVBO = block->vbo;
-	    qglBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_DYNAMIC_DRAW);
+	    qglBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)bytes, 0, GL_STREAM_DRAW);
 	}
 
 	return block;
@@ -282,7 +282,6 @@ idVertexCache::Alloc
 */
 void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool indexBuffer) {
 	vertCache_t* block;
-//LOGI("ALLOC STATIC %d", staticCountTotal);
 
 	if (size <= 0) {
 		common->Error("idVertexCache::Alloc: size = %i\n", size);
@@ -327,7 +326,7 @@ void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool index
 		staticCountThisFrame++;
 	}
 	staticCountTotal++;
-	staticAllocTotal += block->size;
+	staticAllocTotal += size;
 
 	// this will be set to zero when it is purged
 	block->user = buffer;
