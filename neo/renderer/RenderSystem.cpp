@@ -674,7 +674,6 @@ void idRenderSystemLocal::BackendThreadTask()
 		img->ActuallyLoadImage( false );
 	}
 
-	vertexCache.BeginBackEnd(vertListToRender);
 
 	if( useSpinLock )
 	{
@@ -685,6 +684,7 @@ void idRenderSystemLocal::BackendThreadTask()
 		Sys_TriggerEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
 	}
 
+	vertexCache.BeginBackEnd(vertListToRender);
 
 	R_IssueRenderCommands(fdToRender);
 
