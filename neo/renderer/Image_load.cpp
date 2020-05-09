@@ -855,6 +855,8 @@ void	idImage::ActuallyLoadImage( bool fromBind ) {
 	if(fromBind)
 	{
 		LOGI("ERROR!! CAN NOT LOAD IMAGE FROM BIND");
+		globalImages->AddAllocList( this );
+
 		return;
 	}
 

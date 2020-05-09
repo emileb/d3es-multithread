@@ -1825,6 +1825,9 @@ void idImageManager::BeginLevelLoad() {
 		if ( com_purgeAll.GetBool() ) {
 			//image->PurgeImage();
 			globalImages->AddPurgeList( image );
+
+			// Need to do this so it doesn't get missed to be added to alloc list
+			image->texnum = idImage::TEXTURE_NOT_LOADED;
 		}
 
 		image->levelLoadReferenced = false;
@@ -1871,6 +1874,10 @@ void idImageManager::EndLevelLoad() {
 			purgeCount++;
 			//image->PurgeImage();
 			globalImages->AddPurgeList( image );
+
+			// Need to do this so it doesn't get missed to be added to alloc list
+			image->texnum = idImage::TEXTURE_NOT_LOADED;
+
 		} else if ( image->texnum != idImage::TEXTURE_NOT_LOADED ) {
 //			common->Printf( "Keeping %s\n", image->imgName.c_str() );
 			keepCount++;
@@ -1909,11 +1916,16 @@ void idImageManager::EndLevelLoad() {
 
 void idImageManager::AddAllocList( idImage * image )
 {
+	// Not the bind from the backend can add an image to the list
+	Sys_EnterCriticalSection( CRITICAL_SECTION_TWO );
+
 	if(image)
 	{
 		// LOGI("AddAllocList");
 		imagesAlloc.Append( image );
 	}
+
+	Sys_LeaveCriticalSection( CRITICAL_SECTION_TWO );
 }
 
 

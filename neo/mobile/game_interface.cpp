@@ -25,6 +25,10 @@ extern "C"
 
 static char* consoleCmd = NULL;
 
+static bool inMenu = false;
+static bool inGameGuiActive = false;
+static bool objectiveSystemActive = false;
+
 extern int SDL_SendKeyboardKey(Uint8 state, SDL_Scancode scancode);
 void Android_OnMouse( int androidButton, int action, float x, float y);
 
@@ -189,6 +193,16 @@ void PortableAction(int state, int action)
 			PortableKeyEvent(state, sdl_code[action-PORT_ACT_MENU_UP], 0);
 			return;
 		}
+
+		// Allow gamepad fire button to select in the menu
+		if( action == PORT_ACT_ATTACK )
+		{
+			if( state )
+			{
+				Android_OnMouse(BUTTON_PRIMARY, ACTION_DOWN, 0, 0);
+				Android_OnMouse(BUTTON_PRIMARY, ACTION_UP,0, 0);
+			}
+		}
 	}
     else
 	{
@@ -213,7 +227,7 @@ void PortableAction(int state, int action)
             buttonChange(state,UB_MOVERIGHT);
             break;
         case PORT_ACT_ATTACK:
-            buttonChange(state,UB_ATTACK);
+			buttonChange(state,UB_ATTACK);
             break;
         case PORT_ACT_ALT_ATTACK:
 
@@ -403,9 +417,6 @@ void PortableAutomapControl(float zoom, float x, float y)
 {
 }
 
-bool inMenu = false;
-bool inGameGuiActive = false;
-bool objectiveSystemActive = false;
 
 touchscreemode_t PortableGetScreenMode()
 {
@@ -447,6 +458,12 @@ void Android_PumpEvents(int screen)
 	inMenu = screen & 0x1;
 	inGameGuiActive = !!(screen & 0x2);
 	objectiveSystemActive = !!(screen & 0x4);
+
+	// Let the joystick move the mouse
+	if( inMenu || objectiveSystemActive )
+	{
+	   	Android_OnMouse(0, ACTION_MOVE_REL, -look_yaw_joy * 20, look_pitch_joy * 20);
+	}
 }
 
 extern "C" int blockGamepad( void );

@@ -79,7 +79,7 @@ struct version_s {
 idCVar com_version( "si_version", version.string, CVAR_SYSTEM|CVAR_ROM|CVAR_SERVERINFO, "engine version" );
 idCVar com_skipRenderer( "com_skipRenderer", "0", CVAR_BOOL|CVAR_SYSTEM, "skip the renderer completely" );
 idCVar com_machineSpec( "com_machineSpec", "-1", CVAR_INTEGER | CVAR_ARCHIVE | CVAR_SYSTEM, "hardware classification, -1 = not detected, 0 = low quality, 1 = medium quality, 2 = high quality, 3 = ultra quality" );
-idCVar com_purgeAll( "com_purgeAll", "0", CVAR_BOOL | CVAR_ARCHIVE | CVAR_SYSTEM, "purge everything between level loads" );
+idCVar com_purgeAll( "com_purgeAll", "1", CVAR_BOOL | CVAR_ARCHIVE | CVAR_SYSTEM, "purge everything between level loads" );
 idCVar com_memoryMarker( "com_memoryMarker", "-1", CVAR_INTEGER | CVAR_SYSTEM | CVAR_INIT, "used as a marker for memory stats" );
 idCVar com_preciseTic( "com_preciseTic", "1", CVAR_BOOL|CVAR_SYSTEM, "run one game tick every async thread update" );
 idCVar com_asyncInput( "com_asyncInput", "0", CVAR_BOOL|CVAR_SYSTEM, "sample input from the async thread" );
@@ -1476,7 +1476,7 @@ void Com_ExecMachineSpec_f( const idCmdArgs &args ) {
 		cvarSystem->SetCVarInteger( "r_multiSamples", 0, CVAR_ARCHIVE );
 	}
 
-	cvarSystem->SetCVarBool( "com_purgeAll", false, CVAR_ARCHIVE );
+	cvarSystem->SetCVarBool( "com_purgeAll", true, CVAR_ARCHIVE );
 	cvarSystem->SetCVarBool( "r_forceLoadImages", false, CVAR_ARCHIVE );
 
 	cvarSystem->SetCVarBool( "g_decals", true, CVAR_ARCHIVE );
@@ -2761,6 +2761,11 @@ void idCommonLocal::SetMachineSpec( void ) {
 
 	Printf( "Detected\n\t%i MB of System memory\n\n", sysRam );
 
+#ifdef __ANDROID__
+	Printf( "Forcing to Low quality as default.\n" );
+	com_machineSpec.SetInteger( 0 );
+	return;
+#endif
 	if ( sysRam >= 1024 ) {
 		Printf( "This system qualifies for Ultra quality!\n" );
 		com_machineSpec.SetInteger( 3 );
