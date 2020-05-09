@@ -613,7 +613,9 @@ void idRenderSystemLocal::BackendThreadWait()
 {
 	while(!backendFinished)
     {
-        usleep(500 * 1);
+        //usleep(1000 * 3);
+        Sys_WaitForEvent(TRIGGER_EVENT_BACKEND_FINISHED);
+        //usleep(500);
     }
 }
 
@@ -689,6 +691,7 @@ void idRenderSystemLocal::BackendThreadTask()
 	R_IssueRenderCommands(fdToRender);
 
 	backendFinished = true;
+	Sys_TriggerEvent(TRIGGER_EVENT_BACKEND_FINISHED);
 }
 
 void idRenderSystemLocal::BackendThreadExecute()
