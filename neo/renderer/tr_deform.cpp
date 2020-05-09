@@ -65,7 +65,9 @@ static void R_FinishDeform( drawSurf_t *drawSurf, srfTriangles_t *newTri, idDraw
 	drawSurf->ambientCache = newTri->ambientCache;
 	drawSurf->indexCache = newTri->indexCache;
 	drawSurf->numIndexes = newTri->numIndexes;
-
+	drawSurf->numShadowIndexesNoFrontCaps = newTri->numShadowIndexesNoFrontCaps;
+	drawSurf->numShadowIndexesNoCaps = newTri->numShadowIndexesNoCaps;
+	drawSurf->shadowCapPlaneBits = newTri->shadowCapPlaneBits;
 }
 
 /*

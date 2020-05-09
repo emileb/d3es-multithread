@@ -126,6 +126,10 @@ typedef struct drawSurf_s {
     	struct vertCache_s *		indexCache;				// int
     	struct vertCache_s *		ambientCache;			// idDrawVert
     	struct vertCache_s *		shadowCache;			// shadowCache_t
+
+    	int							numShadowIndexesNoFrontCaps;	// shadow volumes with front caps omitted
+		int							numShadowIndexesNoCaps;			// shadow volumes with the front and rear caps omitted
+		int							shadowCapPlaneBits;		// bits 0-5 are set when that plane of the interacting light has triangles
 } drawSurf_t;
 
 

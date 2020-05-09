@@ -823,10 +823,10 @@ the shadow volumes face INSIDE
 =====================
 */
 static void RB_T_GLSL_Shadow(const drawSurf_t* surf, const viewLight_t* vLight) {
-/* TODO, EMILE FIX THIS
-	const srfTriangles_t* tri = surf->geo;
 
-	if ( !tri->shadowCache ) {
+	//const srfTriangles_t* tri = surf->geo;
+
+	if ( !surf->shadowCache ) {
 		return;
 	}
 
@@ -840,36 +840,36 @@ static void RB_T_GLSL_Shadow(const drawSurf_t* surf, const viewLight_t* vLight) 
 	}
 
 	GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Vertex), 4, GL_FLOAT, false, sizeof(shadowCache_t),
-	                       vertexCache.Position(tri->shadowCache));
+	                       vertexCache.Position(surf->shadowCache));
 
 	// we always draw the sil planes, but we may not need to draw the front or rear caps
 	int numIndexes;
 	bool external = false;
 
 	if ( !r_useExternalShadows.GetInteger()) {
-		numIndexes = tri->numIndexes;
+		numIndexes = surf->numIndexes;
 	} else if ( r_useExternalShadows.GetInteger() == 2 ) { // force to no caps for testing
-		numIndexes = tri->numShadowIndexesNoCaps;
+		numIndexes = surf->numShadowIndexesNoCaps;
 	} else if ( !( surf->dsFlags & DSF_VIEW_INSIDE_SHADOW )) {
 		// if we aren't inside the shadow projection, no caps are ever needed needed
-		numIndexes = tri->numShadowIndexesNoCaps;
+		numIndexes = surf->numShadowIndexesNoCaps;
 		external = true;
-	} else if ( !vLight->viewInsideLight && !( surf->geo->shadowCapPlaneBits & SHADOW_CAP_INFINITE )) {
+	} else if ( !vLight->viewInsideLight && !( surf->shadowCapPlaneBits & SHADOW_CAP_INFINITE )) {
 		// if we are inside the shadow projection, but outside the light, and drawing
 		// a non-infinite shadow, we can skip some caps
-		if ( vLight->viewSeesShadowPlaneBits & surf->geo->shadowCapPlaneBits ) {
+		if ( vLight->viewSeesShadowPlaneBits & surf->shadowCapPlaneBits ) {
 			// we can see through a rear cap, so we need to draw it, but we can skip the
 			// caps on the actual surface
-			numIndexes = tri->numShadowIndexesNoFrontCaps;
+			numIndexes = surf->numShadowIndexesNoFrontCaps;
 		} else {
 			// we don't need to draw any caps
-			numIndexes = tri->numShadowIndexesNoCaps;
+			numIndexes = surf->numShadowIndexesNoCaps;
 		}
 
 		external = true;
 	} else {
 		// must draw everything
-		numIndexes = tri->numIndexes;
+		numIndexes = surf->numIndexes;
 	}
 
 	// depth-fail stencil shadows
@@ -881,10 +881,11 @@ static void RB_T_GLSL_Shadow(const drawSurf_t* surf, const viewLight_t* vLight) 
 		qglStencilOpSeparate(backEnd.viewDef->isMirror ? GL_FRONT : GL_BACK, GL_KEEP, GL_KEEP, GL_INCR);
 		qglStencilOpSeparate(backEnd.viewDef->isMirror ? GL_BACK : GL_FRONT, GL_KEEP, GL_KEEP, GL_DECR);
 	}
-	RB_DrawShadowElementsWithCounters(tri, numIndexes);
-*/
+	RB_DrawShadowElementsWithCounters(surf, numIndexes);
+
 	// patent-free work around
-	/*if (!external) {
+	/*
+	if (!external) {
 	  // "preload" the stencil buffer with the number of volumes
 	  // that get clipped by the near or far clip plane
 	  qglStencilOp(GL_KEEP, GL_DECR, GL_DECR);
@@ -902,7 +903,8 @@ static void RB_T_GLSL_Shadow(const drawSurf_t* surf, const viewLight_t* vLight) 
 
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_DECR);
 	GL_Cull(CT_BACK_SIDED);
-	RB_DrawShadowElementsWithCounters(tri, numIndexes);*/
+	RB_DrawShadowElementsWithCounters(tri, numIndexes);
+	*/
 }
 
 

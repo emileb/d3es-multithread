@@ -548,6 +548,10 @@ void R_LinkLightSurf(const drawSurf_t** link, const srfTriangles_t* tri, const v
     drawSurf->shadowCache = tri->shadowCache;
 	drawSurf->numIndexes = tri->numIndexes;
 
+	drawSurf->numShadowIndexesNoFrontCaps = tri->numShadowIndexesNoFrontCaps;
+	drawSurf->numShadowIndexesNoCaps = tri->numShadowIndexesNoCaps;
+	drawSurf->shadowCapPlaneBits = tri->shadowCapPlaneBits;
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
 
@@ -1078,6 +1082,11 @@ void R_AddDrawSurf(const srfTriangles_t* tri, const viewEntity_t* space, const r
 	drawSurf->indexCache = tri->indexCache;
 	drawSurf->shadowCache = tri->shadowCache;
 	drawSurf->numIndexes = tri->numIndexes;
+
+	drawSurf->numShadowIndexesNoFrontCaps = tri->numShadowIndexesNoFrontCaps;
+	drawSurf->numShadowIndexesNoCaps = tri->numShadowIndexesNoCaps;
+	drawSurf->shadowCapPlaneBits = tri->shadowCapPlaneBits;
+
 	drawSurf->space = space;
 	drawSurf->material = shader;
 
