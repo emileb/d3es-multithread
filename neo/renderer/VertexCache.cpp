@@ -91,7 +91,7 @@ void idVertexCache::ActuallyFree(vertCache_t* block) {
 		block->frontEndMemory = NULL;
 	}
 
-	block->frontEndMemoryDirty = false;
+	block->frontEndMemoryDirty = true;
 
 	// unlink stick it back on the free list
 	block->next->prev = block->prev;
@@ -99,11 +99,35 @@ void idVertexCache::ActuallyFree(vertCache_t* block) {
 
 
 	// stick it on the front of the free list so it will be reused immediately
-	block->next = freeStaticHeaders.next;
-	block->prev = &freeStaticHeaders;
+ 	if (block->indexBuffer)
+    {
+  		block->next = freeStaticIndexHeaders.next;
+		block->prev = &freeStaticIndexHeaders;
+    }
+    else
+    {
+		block->next = freeStaticHeaders.next;
+		block->prev = &freeStaticHeaders;
+	}
 
 	block->next->prev = block;
 	block->prev->next = block;
+}
+void idVertexCache::UnbindIndex()
+{
+	if(currentBoundVBO_Index != -1 )
+	{
+		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		currentBoundVBO_Index = -1;
+	}
+}
+void idVertexCache::UnbindVertex()
+{
+	if(currentBoundVBO != -1 )
+	{
+		qglBindBuffer(GL_ARRAY_BUFFER, 0);
+		currentBoundVBO = -1;
+	}
 }
 
 /*
@@ -120,6 +144,18 @@ The ARB_vertex_buffer_object will be bound
 void* idVertexCache::Position(vertCache_t* buffer) {
 	if (!buffer || buffer->tag == TAG_FREE) {
 		common->FatalError("idVertexCache::Position: bad vertCache_t");
+	}
+
+
+	if( buffer->indexBuffer && (r_useIndexVBO.GetBool() == false)  )
+	{
+		UnbindIndex();
+		return (uint8_t*)buffer->frontEndMemory + buffer->offset;
+	}
+	else if( !buffer->indexBuffer && (r_useVertexVBO.GetBool() == false) )
+	{
+		UnbindVertex();
+		return (uint8_t*)buffer->frontEndMemory + buffer->offset;
 	}
 
 	// Create VBO if does not exist
@@ -187,6 +223,8 @@ void idVertexCache::Init() {
 	// initialize the cache memory blocks
 	freeStaticHeaders.next = freeStaticHeaders.prev = &freeStaticHeaders;
 	staticHeaders.next = staticHeaders.prev = &staticHeaders;
+ 	freeStaticIndexHeaders.next = freeStaticIndexHeaders.prev = &freeStaticIndexHeaders;
+    staticIndexHeaders.next = staticIndexHeaders.prev = &staticIndexHeaders;
 
 	freeDynamicHeaders.next = freeDynamicHeaders.prev = &freeDynamicHeaders;
 	freeDynamicIndexHeaders.next = freeDynamicIndexHeaders.prev = &freeDynamicIndexHeaders;
@@ -204,7 +242,6 @@ void idVertexCache::Init() {
 		dynamicHeaders[i].next = dynamicHeaders[i].prev = &dynamicHeaders[i];
         dynamicIndexHeaders[i].next = dynamicIndexHeaders[i].prev = &dynamicIndexHeaders[i];
 		deferredFreeList[i].next = deferredFreeList[i].prev = &deferredFreeList[i];
-
 	}
 
 	EndFrame();
@@ -222,6 +259,9 @@ void idVertexCache::PurgeAll() {
 	while (staticHeaders.next != &staticHeaders) {
 		ActuallyFree(staticHeaders.next);
 	}
+ 	while (staticIndexHeaders.next != &staticIndexHeaders) {
+        ActuallyFree(staticIndexHeaders.next);
+    }
 
 	currentBoundVBO = -1;
 	currentBoundVBO_Index = -1;
@@ -290,29 +330,63 @@ void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool index
 	// if we can't find anything, it will be NULL
 	*buffer = NULL;
 
-	// if we don't have any remaining unused headers, allocate some more
-	if (freeStaticHeaders.next == &freeStaticHeaders) {
+ 	if (indexBuffer)
+    {
+		// if we don't have any remaining unused headers, allocate some more
+		if (freeStaticIndexHeaders.next == &freeStaticIndexHeaders) {
 
-		for (int i = 0; i < EXPAND_HEADERS; i++) {
-			block = headerAllocator.Alloc();
-			block->next = freeStaticHeaders.next;
-			block->prev = &freeStaticHeaders;
-			block->next->prev = block;
-			block->prev->next = block;
-			block->frontEndMemory = NULL;
-			block->frontEndMemoryDirty = true;
-			block->vbo = -1;
+			for (int i = 0; i < EXPAND_HEADERS; i++) {
+				block = headerAllocator.Alloc();
+				block->next = freeStaticIndexHeaders.next;
+				block->prev = &freeStaticIndexHeaders;
+				block->next->prev = block;
+				block->prev->next = block;
+				block->frontEndMemory = NULL;
+				block->frontEndMemoryDirty = true;
+				block->vbo = -1;
+			}
+		}
+    }
+    else
+    {
+		// if we don't have any remaining unused headers, allocate some more
+		if (freeStaticHeaders.next == &freeStaticHeaders) {
+
+			for (int i = 0; i < EXPAND_HEADERS; i++) {
+				block = headerAllocator.Alloc();
+				block->next = freeStaticHeaders.next;
+				block->prev = &freeStaticHeaders;
+				block->next->prev = block;
+				block->prev->next = block;
+				block->frontEndMemory = NULL;
+				block->frontEndMemoryDirty = true;
+				block->vbo = -1;
+			}
 		}
 	}
 
-	// move it from the freeStaticHeaders list to the staticHeaders list
-	block = freeStaticHeaders.next;
-	block->next->prev = block->prev;
-	block->prev->next = block->next;
-	block->next = staticHeaders.next;
-	block->prev = &staticHeaders;
-	block->next->prev = block;
-	block->prev->next = block;
+   	if (indexBuffer)
+	{
+		// move it from the freeStaticIndexHeaders list to the staticHeaders list
+		block = freeStaticIndexHeaders.next;
+		block->next->prev = block->prev;
+		block->prev->next = block->next;
+		block->next = staticIndexHeaders.next;
+		block->prev = &staticIndexHeaders;
+		block->next->prev = block;
+		block->prev->next = block;
+	}
+	else
+	{
+		// move it from the freeStaticHeaders list to the staticHeaders list
+		block = freeStaticHeaders.next;
+		block->next->prev = block->prev;
+		block->prev->next = block->next;
+		block->next = staticHeaders.next;
+		block->prev = &staticHeaders;
+		block->next->prev = block;
+		block->prev->next = block;
+	}
 
 	block->offset = 0;
 	block->tag = TAG_USED;
@@ -338,8 +412,6 @@ void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool index
 	block->frameUsed = currentFrame - NUM_VERTEX_FRAMES;
 
 	block->indexBuffer = indexBuffer;
-
-
 
 	// TODO, make this more efficient...
 #if 0
@@ -389,12 +461,20 @@ void idVertexCache::Touch(vertCache_t* block) {
 	block->next->prev = block->prev;
 	block->prev->next = block->next;
 
-
-	block->next = staticHeaders.next;
-	block->prev = &staticHeaders;
-	staticHeaders.next->prev = block;
-	staticHeaders.next = block;
-
+  	if (block->indexBuffer)
+    {
+		block->next = staticIndexHeaders.next;
+		block->prev = &staticIndexHeaders;
+		staticIndexHeaders.next->prev = block;
+		staticIndexHeaders.next = block;
+    }
+    else
+    {
+		block->next = staticHeaders.next;
+		block->prev = &staticHeaders;
+		staticHeaders.next->prev = block;
+		staticHeaders.next = block;
+	}
 }
 
 /*
@@ -515,7 +595,12 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 	block->frontEndMemory = NULL;
 	block->frontEndMemoryDirty = false;
 
+	// Try to align, might be faster
+	size += 16;
+	size &= 0xFFFFFFF0;
+
 	block->size = size;
+
 	block->tag = TAG_TEMP;
 	block->indexBuffer = indexBuffer;
 	if (indexBuffer) {
@@ -536,9 +621,11 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 	if (indexBuffer) {
 		block->vbo = tempIndexBuffers[listNum]->vbo;
         memcpy( (char*)tempIndexBuffers[listNum]->frontEndMemory + block->offset, data, size);
+        block->frontEndMemory = tempIndexBuffers[listNum]->frontEndMemory;
     } else {
     	block->vbo = tempBuffers[listNum]->vbo;
         memcpy( (char*)tempBuffers[listNum]->frontEndMemory + block->offset, data, size);
+        block->frontEndMemory = tempBuffers[listNum]->frontEndMemory;
 	}
 
 
@@ -552,34 +639,42 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 void  idVertexCache::BeginBackEnd(int which)
 {
 //LOGI("BeginBackEnd list = %d, size index = %d, size = %d", listNum,dynamicAllocThisFrame_Index,dynamicAllocThisFrame);
-	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
-	currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
+
 #if USE_MAP
+	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
+    currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
 	qglUnmapBuffer( GL_ELEMENT_ARRAY_BUFFER );
 
 	currentBoundVBO_Index =   tempIndexBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->vbo;
 	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,currentBoundVBO_Index );
 	tempIndexBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->frontEndMemory = qglMapBufferRange( GL_ELEMENT_ARRAY_BUFFER, 0, FRAME_MEMORY_BYTES, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT );
 #else
-	qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory);
-	//qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory,GL_STATIC_DRAW);
+	if( r_useIndexVBO.GetBool() )
+	{
+		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
+    	currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
+		//qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory);
+		qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory,GL_STREAM_DRAW);
+	}
 #endif
 
 
-
-
-
+#if USE_MAP
 	qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[which]->vbo);
 	currentBoundVBO = tempBuffers[which]->vbo;
-#if USE_MAP
 	qglUnmapBuffer( GL_ARRAY_BUFFER );
 	currentBoundVBO = tempBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->vbo;
 
 	qglBindBuffer(GL_ARRAY_BUFFER, currentBoundVBO);
 	tempBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->frontEndMemory = qglMapBufferRange( GL_ARRAY_BUFFER, 0, FRAME_MEMORY_BYTES, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT );
 #else
-	qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory);
-	//qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory,GL_STATIC_DRAW);
+	if( r_useVertexVBO.GetBool() )
+	{
+		qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[which]->vbo);
+    	currentBoundVBO = tempBuffers[which]->vbo;
+		//qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory);
+		qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory,GL_STREAM_DRAW);
+	}
 #endif
 }
 

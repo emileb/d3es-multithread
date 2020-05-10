@@ -964,6 +964,8 @@ extern idCVar r_multithread;			// enable multithread
 extern idCVar r_noLight;				// no lighting
 extern idCVar r_useETC1;				// ETC1 compression
 extern idCVar r_useETC1Cache;			// use ETC1 cache
+extern idCVar r_useIndexVBO;
+extern idCVar r_useVertexVBO;
 /*
 ====================================================================
 
