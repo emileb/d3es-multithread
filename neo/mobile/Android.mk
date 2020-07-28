@@ -321,6 +321,7 @@ LOCAL_SRC_FILES = $(SRC_ANDROID) \
                   $(src_core) \
                   $(src_sys_base) \
                   $(src_sys_core) \
+                  renderer/framebuffer.cpp \
 
 
 
