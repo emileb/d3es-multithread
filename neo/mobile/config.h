@@ -6,8 +6,8 @@
 
 #define BUILD_LIBRARY_SUFFIX	"/libd3es_game.so"
 
-#define BUILD_LIBDIR			"./D3"
-#define BUILD_DATADIR			"./D3"
+#define BUILD_LIBDIR			"./"
+#define BUILD_DATADIR			"./"
 
 //#cmakedefine HAVE_JPEG_MEM_SRC
 
