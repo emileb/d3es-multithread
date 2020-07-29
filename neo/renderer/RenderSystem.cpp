@@ -690,6 +690,14 @@ void idRenderSystemLocal::BackendThreadTask()
 
 	R_IssueRenderCommands(fdToRender);
 
+	// Take screen shot
+	if(pixels)
+	{
+		qglReadPixels( pixelsCrop->x, pixelsCrop->y, pixelsCrop->width, pixelsCrop->height, GL_RGBA, GL_UNSIGNED_BYTE, (void*)pixels );
+		pixels = NULL;
+		pixelsCrop = NULL;
+	}
+
 	backendFinished = true;
 	Sys_TriggerEvent(TRIGGER_EVENT_BACKEND_FINISHED);
 }
@@ -757,6 +765,69 @@ void idRenderSystemLocal::BackendThreadShutdown()
 	}
 }
 
+void idRenderSystemLocal::RenderCommands(renderCrop_t *pc, byte *pix)
+{
+	// Only do rendering if the app is actually active
+	if(windowActive)
+	{
+		//Wait for last backend rendering to finish
+		BackendThreadWait();
+
+		// LOGI("---------------------NEW FRAME---------------------");
+
+		// We have turned off multithreading, we need to shut it down
+		if(multithreadActive && !r_multithread.GetBool())
+		{
+			BackendThreadShutdown();
+			GLimp_ActivateContext();
+			multithreadActive = false;
+		}
+		else if( !multithreadActive && r_multithread.GetBool() )
+		{
+			multithreadActive = true;
+		}
+
+		//Save the current vertexs and framedata to use for next render
+		vertListToRender = vertexCache.GetListNum();
+		fdToRender = frameData;
+
+		//Save the potential pixel
+		pixelsCrop = pc;
+		pixels = pix;
+
+		BackendThreadExecute();
+
+		// Wait for the backend to load any images, this only really happens at level load time
+		// Problem is image loading is not thread safe, hence the wait
+		if(useSpinLock)
+		{
+			while(!imagesFinished)
+			{
+				if(spinLockDelay)
+					usleep(spinLockDelay);
+			}
+		}
+		else
+		{
+			Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
+		}
+	}
+
+	// If we are waiting for pixel data, make sure we wait for the backend to finish
+	if(pix)
+	{
+		BackendThreadWait();
+	}
+
+	// use the other buffers next frame, because another CPU
+	// may still be rendering into the current buffers
+	R_ToggleSmpFrame();
+
+	// we can now release the vertexes used this frame
+	vertexCache.EndFrame();
+
+	R_ClearCommandChain();
+}
 /*
 =============
 EndFrame
@@ -796,55 +867,8 @@ void idRenderSystemLocal::EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	cmd = (emptyCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
 	cmd->commandId = RC_SWAP_BUFFERS;
 
-	// Only do rendering if the app is actually active
-	if(windowActive)
-	{
-		//Wait for last backend rendering to finish
-		BackendThreadWait();
-
-		// LOGI("---------------------NEW FRAME---------------------");
-
-		// We have turned off multithreading, we need to shut it down
-		if(multithreadActive && !r_multithread.GetBool())
-		{
-			BackendThreadShutdown();
-			GLimp_ActivateContext();
-			multithreadActive = false;
-		}
-		else if( !multithreadActive && r_multithread.GetBool() )
-		{
-			multithreadActive = true;
-		}
-
-		//Save the current vertexs and framedata to use for next render
-		vertListToRender = vertexCache.GetListNum();
-		fdToRender = frameData;
-
-		BackendThreadExecute();
-
-		// Wait for the backend to load any images, this only really happens at level load time
-		// Problem is image loading is not thread safe, hence the wait
-		if(useSpinLock)
-		{
-			while(!imagesFinished)
-			{
-				if(spinLockDelay)
-					usleep(spinLockDelay);
-			}
-		}
-		else
-		{
-			Sys_WaitForEvent(TRIGGER_EVENT_IMAGES_PROCESSES);
-		}
-	}
-	// use the other buffers next frame, because another CPU
-	// may still be rendering into the current buffers
-	R_ToggleSmpFrame();
-
-	// we can now release the vertexes used this frame
-	vertexCache.EndFrame();
-
-	R_ClearCommandChain();
+	// Render the commands. No pixel data passed so it will return immediatle if multithreading
+	RenderCommands(0, 0);
 
 	if ( session->writeDemo ) {
 		session->writeDemo->WriteInt( DS_RENDER );
@@ -1052,21 +1076,18 @@ void idRenderSystemLocal::CaptureRenderToFile( const char *fileName, bool fixAlp
 	if ( !glConfig.isInitialized ) {
 		return;
 	}
-/*
+
 	renderCrop_t *rc = &renderCrops[currentRenderCrop];
 
 	guiModel->EmitFullScreen();
 	guiModel->Clear();
-	R_IssueRenderCommands();
-
-	// Disabled for OES2
-	//qglReadBuffer( GL_BACK );
 
 	// include extra space for OpenGL padding to word boundaries
 	int	c = ( rc->width + 4 ) * rc->height;
 	byte *data = (byte *)R_StaticAlloc( c * 4 );
 
-	qglReadPixels( rc->x, rc->y, rc->width, rc->height, GL_RGBA, GL_UNSIGNED_BYTE, data );
+	// This will render the commands and will block untill finished and has the pixel data
+	RenderCommands(rc, data);
 
 	byte *data2 = (byte *)R_StaticAlloc( c * 4 );
 
@@ -1081,7 +1102,6 @@ void idRenderSystemLocal::CaptureRenderToFile( const char *fileName, bool fixAlp
 
 	R_StaticFree( data );
 	R_StaticFree( data2 );
-	*/
 }
 
 

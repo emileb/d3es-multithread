@@ -736,6 +736,10 @@ public:
 	volatile frameData_t	*fdToRender = NULL;
 	volatile int			vertListToRender = 0;
 
+	// These are set if the backend should save pixels
+	volatile renderCrop_t	*pixelsCrop = NULL;
+	volatile byte           *pixels = NULL;
+
 	// The backend task
 	void					BackendThreadTask();
 
@@ -749,6 +753,10 @@ public:
 	void					BackendThreadWait();
 
 	void					BackendThreadShutdown();
+
+	// Call this to render the current command buffer.
+	// If you pass is pixels it will block and perform a glReadPixels
+	void					RenderCommands(renderCrop_t *pixelsCrop, byte *pixels);
 
 	// Static runner to start thread
 	static int				BackendThreadRunner(void *localRenderSystem);
