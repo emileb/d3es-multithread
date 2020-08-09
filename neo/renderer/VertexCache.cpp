@@ -50,6 +50,7 @@ static const int	EXPAND_HEADERS = 1024;
 
 idCVar idVertexCache::r_showVertexCache("r_showVertexCache", "0", CVAR_INTEGER | CVAR_RENDERER, "");
 idCVar idVertexCache::r_vertexBufferMegs("r_vertexBufferMegs", "128", CVAR_INTEGER | CVAR_RENDERER, "");
+idCVar idVertexCache::r_freeVertexBuffer("r_freeVertexBuffer", "1", CVAR_BOOL | CVAR_RENDERER, "");
 
 idVertexCache		vertexCache;
 
@@ -82,7 +83,36 @@ void idVertexCache::ActuallyFree(vertCache_t* block) {
 	if (block->tag != TAG_TEMP) {
 		staticAllocTotal -= block->size;
 		staticCountTotal--;
+
+		if(block->vbo != -1 && r_freeVertexBuffer.GetBool())
+		{
+			if (block->indexBuffer)
+            {
+				if (block->vbo != currentBoundVBO_Index) {
+					qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, block->vbo);
+				}
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, block->vbo);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, 0, 0, GL_STREAM_DRAW);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+				//glDeleteBuffers(1, &block->vbo); // Doing this makes it slow AF
+				//block->vbo = -1;
+				currentBoundVBO_Index = -1;
+            }
+            else
+            {
+				if (block->vbo != currentBoundVBO) {
+					qglBindBuffer(GL_ARRAY_BUFFER, block->vbo);
+				}
+				glBindBuffer(GL_ARRAY_BUFFER, block->vbo);
+				glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STREAM_DRAW);
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				//glDeleteBuffers(1, &block->vbo); // Doing this makes it slow AF
+				//block->vbo = -1;
+				currentBoundVBO = -1;
+            }
+		}
 	}
+
 	block->tag = TAG_FREE;		// mark as free
 
 	if(block->frontEndMemory)

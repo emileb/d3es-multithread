@@ -116,6 +116,7 @@ private:
 
 	static idCVar r_showVertexCache;
 	static idCVar r_vertexBufferMegs;
+	static idCVar r_freeVertexBuffer;
 
 	int staticCountTotal;
 	int staticAllocTotal;    // for end of frame purging
