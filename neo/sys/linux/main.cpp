@@ -92,22 +92,30 @@ bool Sys_GetPath(sysPath_t type, idStr &path) {
 		return false;
 
 	case PATH_CONFIG:
+#ifdef __ANDROID__
+		s = getenv("USER_FILES");
+		idStr::snPrintf(buf, sizeof(buf), "%s/d3es/config", s);
+#else
 		s = getenv("XDG_CONFIG_HOME");
 		if (s)
 			idStr::snPrintf(buf, sizeof(buf), "%s/dhewm3", s);
 		else
 			idStr::snPrintf(buf, sizeof(buf), "%s/.config/dhewm3", getenv("HOME"));
-
+#endif
 		path = buf;
 		return true;
 
 	case PATH_SAVE:
+#ifdef __ANDROID__
+		s = getenv("USER_FILES");
+		idStr::snPrintf(buf, sizeof(buf), "%s/d3es/saves", s);
+#else
 		s = getenv("XDG_DATA_HOME");
 		if (s)
 			idStr::snPrintf(buf, sizeof(buf), "%s/dhewm3", s);
 		else
 			idStr::snPrintf(buf, sizeof(buf), "%s/.local/share/dhewm3", getenv("HOME"));
-
+#endif
 		path = buf;
 		return true;
 
