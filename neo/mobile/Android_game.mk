@@ -5,12 +5,10 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := d3es_game
 
-
 LOCAL_C_INCLUDES :=  \
 $(SDL_INCLUDE_PATHS) \
 $(TOP_DIR)/Doom/d3es/neo/mobile \
 $(TOP_DIR)/Doom/d3es/neo/game \
-
 
 
 LOCAL_CPPFLAGS :=  -DGAME_DLL -fPIC
@@ -27,12 +25,6 @@ LOCAL_CPPFLAGS += -Wno-sign-compare \
 LOCAL_CFLAGS := -DIOAPI_NO_64
 
 LOCAL_CFLAGS +=  -fno-unsafe-math-optimizations -fno-strict-aliasing -fno-math-errno -fno-trapping-math -fsigned-char  -DUSE_LIBC_MALLOC=1
-
-
-SRC_ANDROID = mobile/game_interface.cpp \
-              ../../../Clibs_OpenTouch/idtech1/android_jni.cpp \
-              ../../../Clibs_OpenTouch/idtech1/touch_interface.cpp \
-
 
 
 src_idlib = \
@@ -157,14 +149,10 @@ src_game = \
 	game/physics/Physics_StaticMulti.cpp \
 	game/physics/Push.cpp \
 
-
-
 LOCAL_SRC_FILES = $(src_idlib) $(src_game)
 
-
 LOCAL_SHARED_LIBRARIES :=
-
 LOCAL_STATIC_LIBRARIES :=
-
 LOCAL_LDLIBS :=
+
 include $(BUILD_SHARED_LIBRARY)

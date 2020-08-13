@@ -2574,7 +2574,14 @@ void idCommonLocal::Async( void ) {
 
 
 #ifdef __ANDROID__
-extern "C" char const * nativeLibsPath;
+extern "C"
+{
+  	#define GAME_DOOM3  16
+    #define GAME_DOOM3_ROE  17
+
+	extern int gameType;
+	extern char const * nativeLibsPath;
+}
 #endif
 
 
@@ -2648,6 +2655,20 @@ void idCommonLocal::LoadGameDLL( void ) {
 
 	gameDLL = 0;
 
+#ifdef __ANDROID__
+	common->Warning( "nativeLibsPath = %s, gameType = %d", nativeLibsPath, gameType );
+
+	if(gameType == GAME_DOOM3)
+		strcpy(dll,"/libd3es_game.so");
+	else if(gameType == GAME_DOOM3_ROE)
+		strcpy(dll,"/libd3es_d3xp.so");
+	else
+		common->Warning( "BAD GAME TYPE" );
+
+	common->Warning( "Android loading.. %s", dll );
+
+	LoadGameDLLbyName(dll, s);
+#else
 	sys->DLL_GetFileName(fs_game, dll, sizeof(dll));
 	LoadGameDLLbyName(dll, s);
 
@@ -2657,13 +2678,6 @@ void idCommonLocal::LoadGameDLL( void ) {
 		sys->DLL_GetFileName(BASE_GAMEDIR, dll, sizeof(dll));
 		LoadGameDLLbyName(dll, s);
 	}
-
-#ifdef __ANDROID__
-		common->Warning( "nativeLibsPath = %s", nativeLibsPath );
-
-		sys->DLL_GetFileName("", dll, sizeof(dll));
-		common->Warning( "Android loading.. %s", dll );
-		LoadGameDLLbyName(dll, s);
 #endif
 
 	if ( !gameDLL ) {
