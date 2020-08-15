@@ -133,6 +133,10 @@ private:
 	int currentFrame;      // for purgable block tracking
 	int listNum;        // currentFrame % NUM_VERTEX_FRAMES, determines which tempBuffers to use
 
+	int staticAllocMaximum;
+	int dynamicAllocMaximum;
+   	int dynamicAllocMaximum_Index;
+
 
 	vertCache_t *tempBuffers[NUM_VERTEX_FRAMES];    // allocated at startup
 	vertCache_t *tempIndexBuffers[NUM_VERTEX_FRAMES];    // allocated at startup (for Index buffers)

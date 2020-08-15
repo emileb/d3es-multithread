@@ -413,7 +413,7 @@ GLExtension_t GLimp_ExtensionPointer(const char *name) {
 	}
 
 	GLExtension_t ret =  (GLExtension_t)dlsym(glesLib, name);
-	common->Printf("GLimp_ExtensionPointer %s  %p\n",name,ret);
+	//common->Printf("GLimp_ExtensionPointer %s  %p\n",name,ret);
 	return ret;
 #endif
 

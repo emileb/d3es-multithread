@@ -265,6 +265,10 @@ void idVertexCache::Init() {
 	staticAllocTotal = 0;
 	staticCountTotal = 0;
 
+	staticAllocMaximum = 0;
+	dynamicAllocMaximum = 0;
+   	dynamicAllocMaximum_Index = 0;
+
 	// Allocate the temporary buffers (number of temporary buffers is NUM_VERTEX_FRAMES)
 	for (int i = 0; i < NUM_VERTEX_FRAMES; i++) {
 		tempBuffers[i] = CreateTempVbo(frameBytes, false);
@@ -432,6 +436,9 @@ void idVertexCache::Alloc(void* data, int size, vertCache_t** buffer, bool index
 	staticCountTotal++;
 	staticAllocTotal += size;
 
+	if(staticAllocTotal > staticAllocMaximum)
+		staticAllocMaximum = staticAllocTotal;
+
 	// this will be set to zero when it is purged
 	block->user = buffer;
 	*buffer = block;
@@ -555,6 +562,7 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 
 	if (indexBuffer) {
 		if (dynamicAllocThisFrame_Index[listNum] + size > frameBytes) {
+			LOGI("WARNING DYNAMIC OVERFLOW!!");
 			// if we don't have enough room in the temp block, allocate a static block,
 			// but immediately free it so it will get freed at the next frame
 			tempOverflow = true;
@@ -564,6 +572,7 @@ vertCache_t* idVertexCache::AllocFrameTemp(void* data, int size, bool indexBuffe
 		}
 	} else {
 		if (dynamicAllocThisFrame[listNum] + size > frameBytes) {
+			LOGI("WARNING DYNAMIC OVERFLOW!!");
 			// if we don't have enough room in the temp block, allocate a static block,
 			// but immediately free it so it will get freed at the next frame
 			tempOverflow = true;
@@ -676,15 +685,15 @@ void  idVertexCache::BeginBackEnd(int which)
 	qglUnmapBuffer( GL_ELEMENT_ARRAY_BUFFER );
 
 	currentBoundVBO_Index =   tempIndexBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->vbo;
-	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,currentBoundVBO_Index );
+	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, currentBoundVBO_Index );
 	tempIndexBuffers[(which + 1)  % NUM_VERTEX_FRAMES]->frontEndMemory = qglMapBufferRange( GL_ELEMENT_ARRAY_BUFFER, 0, FRAME_MEMORY_BYTES, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT );
 #else
 	if( r_useIndexVBO.GetBool() )
 	{
-		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER,  tempIndexBuffers[which]->vbo);
+		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tempIndexBuffers[which]->vbo);
     	currentBoundVBO_Index =  tempIndexBuffers[which]->vbo;
 		//qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory);
-		qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory,GL_STREAM_DRAW);
+		qglBufferData(GL_ELEMENT_ARRAY_BUFFER, dynamicAllocThisFrame_Index[which], tempIndexBuffers[which]->frontEndMemory, GL_STREAM_DRAW);
 	}
 #endif
 
@@ -700,12 +709,19 @@ void  idVertexCache::BeginBackEnd(int which)
 #else
 	if( r_useVertexVBO.GetBool() )
 	{
-		qglBindBuffer(GL_ARRAY_BUFFER,  tempBuffers[which]->vbo);
+		qglBindBuffer(GL_ARRAY_BUFFER, tempBuffers[which]->vbo);
     	currentBoundVBO = tempBuffers[which]->vbo;
 		//qglBufferSubData(GL_ARRAY_BUFFER,0, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory);
-		qglBufferData(GL_ARRAY_BUFFER,dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory,GL_STREAM_DRAW);
+		qglBufferData(GL_ARRAY_BUFFER, dynamicAllocThisFrame[which], tempBuffers[which]->frontEndMemory, GL_STREAM_DRAW);
 	}
 #endif
+
+	if(dynamicAllocThisFrame_Index[which] > dynamicAllocMaximum_Index)
+		dynamicAllocMaximum_Index = dynamicAllocThisFrame_Index[which];
+
+	if(dynamicAllocThisFrame[which] > dynamicAllocMaximum)
+		dynamicAllocMaximum = dynamicAllocThisFrame[which];
+
 }
 
 /*
@@ -725,8 +741,6 @@ void idVertexCache::EndFrame() {
 				staticUseSize += block->size;
 			}
 		}
-
-
 
 		const char* frameOverflow = tempOverflow ? "(OVERFLOW)" : "";
 
@@ -792,6 +806,11 @@ void idVertexCache::EndFrame() {
 		freeDynamicIndexHeaders.next = block;
 
 		dynamicIndexHeaders[listNum].next = dynamicIndexHeaders[listNum].prev = &dynamicIndexHeaders[listNum];
+	}
+
+	if(currentFrame % 60 == 0)
+	{
+		common->Printf("Max static = %08d, Max dynamic = %08d, Max dynamicI = %08d\n", staticAllocMaximum, dynamicAllocMaximum, dynamicAllocMaximum_Index);
 	}
 }
 
