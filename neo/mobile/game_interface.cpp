@@ -4,12 +4,15 @@
 
 extern int main_android(int argc, char *argv[]);
 
+#include "renderer/tr_local.h"
+
 extern "C"
 {
 
 #include "game_interface.h"
 #include "SDL.h"
 #include "SDL_keycode.h"
+
 
 #define ACTION_DOWN 0
 #define ACTION_UP 1
@@ -397,7 +400,7 @@ void PortableInit(int argc,const char ** argv){
 void PortableMouse(float dx,float dy)
 {
     //LOGI("%f %f",dx,dy);
-    Android_OnMouse(0, ACTION_MOVE_REL, -dx * 3000, -dy * 1200);
+    Android_OnMouse(0, ACTION_MOVE_REL, -dx * (float)glConfig.vidWidth * 2.f, -dy * (float)glConfig.vidHeight * 2.f);
 }
 
 void PortableMouseButton(int state, int button, float dx,float dy)
