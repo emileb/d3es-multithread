@@ -396,11 +396,23 @@ void PortableInit(int argc,const char ** argv){
 	main_android(argc,(char **)argv);
 }
 
-
+static float mouseAccumX = 0;
+static float mouseAccumY = 0;
+#define MIN_MOUSE_MOVE 1
 void PortableMouse(float dx,float dy)
 {
     //LOGI("%f %f",dx,dy);
-    Android_OnMouse(0, ACTION_MOVE_REL, -dx * (float)glConfig.vidWidth * 2.f, -dy * (float)glConfig.vidHeight * 2.f);
+    mouseAccumX += -dx * (float)glConfig.vidWidth * 2.f;
+    mouseAccumY += -dy * (float)glConfig.vidHeight * 2.f;
+    if(abs(mouseAccumX) > MIN_MOUSE_MOVE || abs(mouseAccumY) > MIN_MOUSE_MOVE)
+    {
+    	Android_OnMouse(0, ACTION_MOVE_REL, mouseAccumX, mouseAccumY);
+    	if(abs(mouseAccumX) > MIN_MOUSE_MOVE)
+    		mouseAccumX = 0;
+
+		if(abs(mouseAccumY) > MIN_MOUSE_MOVE)
+			mouseAccumY = 0;
+	}
 }
 
 void PortableMouseButton(int state, int button, float dx,float dy)
