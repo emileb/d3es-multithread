@@ -5,6 +5,9 @@ GPL3
 #include "renderer/tr_local.h"
 #include "renderer/VertexCache.h"
 
+
+idCVar r_framebufferFilter( "r_framebufferFilter", "0", CVAR_RENDERER | CVAR_BOOL, "Image filter when using the framebuffer. 0 = Nearest, 1 = Linear" );
+
 static GLuint m_framebuffer = -1;
 static GLuint m_depthbuffer;
 static GLuint m_stencilbuffer;
@@ -178,8 +181,16 @@ void R_InitFrameBuffer()
 	glBindTexture(GL_TEXTURE_2D, m_framebuffer_texture);
 	
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_framebuffer_width, m_framebuffer_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	if(r_framebufferFilter.GetInteger() == 0)
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	else
+	{
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 
 	// Create framebuffer
 	glGenFramebuffers(1, &m_framebuffer);
