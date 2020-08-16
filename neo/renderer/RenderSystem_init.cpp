@@ -237,6 +237,14 @@ R_CheckPortableExtensions
 static void R_CheckPortableExtensions( void ) {
 	// GL_EXT_texture_filter_anisotropic (extension only)
 	glConfig.anisotropicAvailable = R_CheckExtension( "GL_EXT_texture_filter_anisotropic" );
+
+	glConfig.npotAvailable = R_CheckExtension( "GL_OES_texture_npot" );
+	common->Printf(" npotAvailable: %d\n", glConfig.npotAvailable);
+
+	glConfig.depthStencilAvailable = R_CheckExtension( "GL_OES_packed_depth_stencil" );
+	common->Printf(" depthStencilAvailable: %d\n", glConfig.npotAvailable);
+
+
 	if ( glConfig.anisotropicAvailable ) {
 		qglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.maxTextureAnisotropy);
 		common->Printf("   maxTextureAnisotropy: %f\n", glConfig.maxTextureAnisotropy);
@@ -1718,6 +1726,8 @@ void idRenderSystemLocal::InitOpenGL( void ) {
 			common->Printf( "glGetError() = 0x%x\n", err );
 		}
 	}
+
+	R_InitFrameBuffer();
 }
 
 /*

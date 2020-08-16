@@ -58,7 +58,13 @@ typedef struct glconfig_s {
 
 	bool				anisotropicAvailable;
 
+	bool				npotAvailable;
+
+	bool				depthStencilAvailable;
+
 	int					vidWidth, vidHeight;	// passed to R_BeginFrame
+
+	int					vidWidthReal, vidHeightReal; // The real resolution of the screen, uses framebuffer if not the same as vidWidth
 
 	int					displayFrequency;
 

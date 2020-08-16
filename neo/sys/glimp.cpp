@@ -207,7 +207,8 @@ bool GLimp_Init(glimpParms_t parms) {
 		if (SDL_GL_SetSwapInterval(r_swapInterval.GetInteger()) < 0)
 			common->Warning("SDL_GL_SWAP_CONTROL not supported");
 
-		SDL_GetWindowSize(window, &glConfig.vidWidth, &glConfig.vidHeight);
+		SDL_GetWindowSize(window, &glConfig.vidWidthReal, &glConfig.vidHeightReal);
+
 
 		SetSDLIcon(); // for SDL2  this must be done after creating the window
 

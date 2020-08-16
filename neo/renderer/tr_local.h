@@ -1287,6 +1287,11 @@ void RB_GLSL_DrawInteractions(void);
 int  RB_GLSL_DrawShaderPasses(drawSurf_t **drawSurfs, int numDrawSurfs);
 void RB_GLSL_FogAllLights(void);
 
+// Framebuffer stuff
+void R_InitFrameBuffer();
+void R_FrameBufferStart();
+void R_FrameBufferEnd();
+
 /*
 ============================================================
 

@@ -340,8 +340,13 @@ const void	RB_SwapBuffers( const void *data ) {
 		qglFinish();
 	}
 
+	R_FrameBufferEnd();
+
 	// don't flip if drawing to front buffer
 	GLimp_SwapBuffers();
+
+
+	R_FrameBufferStart();
 }
 
 /*
