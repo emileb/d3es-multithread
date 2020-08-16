@@ -807,11 +807,12 @@ void idVertexCache::EndFrame() {
 
 		dynamicIndexHeaders[listNum].next = dynamicIndexHeaders[listNum].prev = &dynamicIndexHeaders[listNum];
 	}
-
+#if 0
 	if(currentFrame % 60 == 0)
 	{
 		common->Printf("Max static = %08d, Max dynamic = %08d, Max dynamicI = %08d\n", staticAllocMaximum, dynamicAllocMaximum, dynamicAllocMaximum_Index);
 	}
+#endif
 }
 
 /*
