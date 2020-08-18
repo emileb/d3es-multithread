@@ -218,4 +218,16 @@ typedef int						qhandle_t;
 #define MIN_WORLD_COORD			( -128 * 1024 )
 #define MAX_WORLD_SIZE			( MAX_WORLD_COORD - MIN_WORLD_COORD )
 
+
+#ifdef __ANDROID__
+extern "C"
+{
+  	#define GAME_DOOM3  16
+    #define GAME_DOOM3_ROE  17
+
+	extern int gameType;
+	extern char const * nativeLibsPath;
+}
+#endif
+
 #endif

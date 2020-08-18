@@ -5,6 +5,7 @@
 extern int main_android(int argc, char *argv[]);
 
 #include "renderer/tr_local.h"
+#include "sys/platform.h"
 
 extern "C"
 {
@@ -301,7 +302,12 @@ void PortableAction(int state, int action)
             break;
 		case PORT_ACT_FLASH_LIGHT:
 			if (state)
-				SetImpuse(UB_IMPULSE11);
+			{
+				if(gameType == GAME_DOOM3)
+					SetImpuse(UB_IMPULSE11);
+				else if(gameType == GAME_DOOM3_ROE)
+					SetImpuse(UB_IMPULSE0);
+			}
 			break;
 		case PORT_ACT_HELPCOMP:
 			if (state)
