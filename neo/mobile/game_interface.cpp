@@ -170,9 +170,14 @@ typedef enum {
 static int cmdButtons[UB_MAX_BUTTONS];
 
 
-void buttonChange(int state, int key )
+static void buttonChange(int state, int key )
 {
 	cmdButtons[key] = state;
+}
+
+static int getButton(int key)
+{
+	return cmdButtons[key];
 }
 
 void PortableAction(int state, int action)
@@ -308,6 +313,10 @@ void PortableAction(int state, int action)
 				else if(gameType == GAME_DOOM3_ROE)
 					SetImpuse(UB_IMPULSE0);
 			}
+			break;
+		case PORT_ACT_ZOOM_IN:
+			if(state)
+				getButton(UB_ZOOM) ? buttonChange(0, UB_ZOOM): buttonChange(1, UB_ZOOM);
 			break;
 		case PORT_ACT_HELPCOMP:
 			if (state)
