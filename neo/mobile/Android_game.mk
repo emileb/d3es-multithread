@@ -151,7 +151,7 @@ src_game = \
 
 LOCAL_SRC_FILES = $(src_idlib) $(src_game)
 
-LOCAL_SHARED_LIBRARIES :=
+LOCAL_SHARED_LIBRARIES := saffal
 LOCAL_STATIC_LIBRARIES :=
 LOCAL_LDLIBS :=
 

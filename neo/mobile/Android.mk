@@ -326,7 +326,7 @@ LOCAL_SRC_FILES = $(SRC_ANDROID) \
 
 
 
-LOCAL_SHARED_LIBRARIES := openal touchcontrols core_shared SDL2 libvorbis libogg
+LOCAL_SHARED_LIBRARIES := openal touchcontrols core_shared SDL2 libvorbis libogg saffal
 
 LOCAL_STATIC_LIBRARIES := logwritter jpeg
 
