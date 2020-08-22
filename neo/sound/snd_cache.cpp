@@ -576,14 +576,11 @@ void idSoundSample::PurgeSoundSample() {
 	alGetError();
 	alDeleteBuffers( 1, &openalBuffer );
 	if ( alGetError() != AL_NO_ERROR ) {
-
-		//common->Error( "idSoundCache: error unloading data from OpenAL hardware buffer" );
-		// Change to a warning so does not crash the game
 		common->Warning( "idSoundCache: error unloading data from OpenAL hardware buffer" );
-	} else {
-		openalBuffer = 0;
-		hardwareBuffer = false;
 	}
+
+	openalBuffer = 0;
+	hardwareBuffer = false;
 
 	if ( amplitudeData ) {
 		soundCacheAllocator.Free( amplitudeData );

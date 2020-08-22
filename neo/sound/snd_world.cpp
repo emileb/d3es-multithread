@@ -1780,7 +1780,10 @@ void idSoundWorldLocal::AddChannelContribution( idSoundEmitterLocal *sound, idSo
 				alSource3f( chan->openalSource, AL_POSITION, -spatializedOriginInMeters.y, spatializedOriginInMeters.z, -spatializedOriginInMeters.x );
 				alSourcef( chan->openalSource, AL_GAIN, ( volume ) < ( 1.0f ) ? ( volume ) : ( 1.0f ) );
 			}
-			alSourcei( chan->openalSource, AL_LOOPING, ( looping && chan->soundShader->entries[0]->hardwareBuffer ) ? AL_TRUE : AL_FALSE );
+			// DG: looping sounds with a leadin can't just use a HW buffer and openal's AL_LOOPING
+			//     because we need to switch from leadin to the looped sound.. see https://github.com/dhewm/dhewm3/issues/291
+			bool haveLeadin = chan->soundShader->numLeadins > 0;
+			alSourcei( chan->openalSource, AL_LOOPING, ( looping && chan->soundShader->entries[0]->hardwareBuffer && !haveLeadin ) ? AL_TRUE : AL_FALSE );
 #if 1
 			alSourcef( chan->openalSource, AL_REFERENCE_DISTANCE, mind );
 			alSourcef( chan->openalSource, AL_MAX_DISTANCE, maxd );
@@ -1797,8 +1800,11 @@ void idSoundWorldLocal::AddChannelContribution( idSoundEmitterLocal *sound, idSo
 			}
 
 
-			if ( ( !looping && chan->leadinSample->hardwareBuffer ) || ( looping && chan->soundShader->entries[0]->hardwareBuffer ) ) {
+			if ( ( !looping && chan->leadinSample->hardwareBuffer )
+				|| ( looping && !haveLeadin && chan->soundShader->entries[0]->hardwareBuffer ) ) {
 				// handle uncompressed (non streaming) single shot and looping sounds
+				// DG: ... that have no leadin (with leadin we still need to switch to another sound,
+				//     just use streaming code for that) - see https://github.com/dhewm/dhewm3/issues/291
 				if ( chan->triggered ) {
 					alSourcei( chan->openalSource, AL_BUFFER, looping ? chan->soundShader->entries[0]->openalBuffer : chan->leadinSample->openalBuffer );
 				}
@@ -1851,7 +1857,11 @@ void idSoundWorldLocal::AddChannelContribution( idSoundEmitterLocal *sound, idSo
 				chan->triggered = false;
 			}
 		}
-	} else {
+	}
+#if 1 // DG: I /think/ this was only relevant for the old sound backends?
+	// FIXME: completely remove else branch, but for testing leave it in under com_asyncSound 2
+	//        (which also does the old 92-100ms updates)
+	else if( com_asyncSound.GetInteger() == 2 ) {
 
 		if ( slowmoActive && !chan->disallowSlow ) {
 			idSlowChannel slow = sound->GetSlowChannel( chan );
@@ -1946,6 +1956,7 @@ void idSoundWorldLocal::AddChannelContribution( idSoundEmitterLocal *sound, idSo
 		}
 
 	}
+#endif // 1/0
 
 	soundSystemLocal.soundStats.activeSounds++;
 

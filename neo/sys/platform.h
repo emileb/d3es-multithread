@@ -85,6 +85,9 @@ If you have questions concerning this license or the applicable additional terms
 #define ALIGN16( x )				__declspec(align(16)) x
 #define PACKED
 #define ID_INLINE					__forceinline
+// DG: alternative to forced inlining of ID_INLINE for functions that do alloca()
+//     and are called in a loop so inlining them might cause stack overflow
+#define ID_MAYBE_INLINE				__inline
 #define ID_STATIC_TEMPLATE			static
 #define assertmem( x, y )			assert( _CrtIsValidPointer( x, y, true ) )
 #else
@@ -136,8 +139,8 @@ If you have questions concerning this license or the applicable additional terms
 // Unix
 #ifdef __unix__
 
-#define _alloca						alloca
-#define _alloca16( x )				((void *)((((uintptr_t)alloca( (x)+15 )) + 15) & ~15))
+#define _alloca( x )				(({assert( (x)<600000 );}), alloca( (x) ))
+#define _alloca16( x )				(({assert( (x)<600000 );}),((void *)((((uintptr_t)alloca( (x)+15 )) + 15) & ~15)))
 
 #ifdef GAME_DLL
 #define ID_GAME_API					__attribute__((visibility ("default")))
@@ -161,6 +164,10 @@ If you have questions concerning this license or the applicable additional terms
 
 #endif
 
+#ifndef ID_MAYBE_INLINE
+// for MSVC it's __inline, otherwise just inline should work
+#define ID_MAYBE_INLINE inline
+#endif // ID_MAYBE_INLINE
 
 #ifdef __GNUC__
 #define id_attribute(x) __attribute__(x)
