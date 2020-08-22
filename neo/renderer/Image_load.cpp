@@ -29,6 +29,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "sys/platform.h"
 #include "idlib/hashing/MD4.h"
 #include "renderer/tr_local.h"
+#include "renderer/Cinematic.h"
 
 #include "renderer/Image.h"
 
@@ -856,10 +857,27 @@ void	idImage::ActuallyLoadImage( bool fromBind ) {
 	{
 		LOGI("ERROR!! CAN NOT LOAD IMAGE FROM BIND");
 		globalImages->AddAllocList( this );
-
 		return;
 	}
 
+
+	if( cinematic )
+	{
+		cinData_t	cin;
+
+		cin = cinematic->ImageForTime( cinmaticNextTime );
+
+		if( texnum == TEXTURE_NOT_LOADED )
+			qglGenTextures( 1, &texnum );
+
+		if ( cin.image ) {
+			UploadScratch( cin.image, cin.imageWidth, cin.imageHeight );
+		} else {
+			//globalImages->blackImage->Bind();
+		}
+
+		return;
+	}
 
 	// this is the ONLY place generatorFunction will ever be called
 	if ( generatorFunction ) {
@@ -907,7 +925,7 @@ void	idImage::ActuallyLoadImage( bool fromBind ) {
 		//imageHash = MD4_BlockChecksum( pic, width * height * 4 );
 
 		GenerateImage( pic, width, height, filter, allowDownSize, repeat, depth );
-		timestamp = timestamp;
+		//timestamp = timestamp;
 
 		R_StaticFree( pic );
 	}
@@ -934,12 +952,15 @@ Bind
 Automatically enables 2D mapping, cube mapping, or 3D texturing if needed
 ==============
 */
-void idImage::Bind() {
+bool idImage::Bind() {
 	// load the image if necessary (FIXME: not SMP safe!)
 	if ( texnum == TEXTURE_NOT_LOADED ) {
 
 		// load the image on demand here, which isn't our normal game operating mode
 		ActuallyLoadImage( true );
+		// Load a black image to reduce flicker
+		globalImages->blackImage->Bind();
+		return false;
 	}
 
 
@@ -953,6 +974,7 @@ void idImage::Bind() {
 	} else if ( type == TT_CUBIC ) {
 		qglBindTexture( GL_TEXTURE_CUBE_MAP, texnum );
 	}
+	return true;
 }
 
 /*

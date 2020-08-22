@@ -150,6 +150,20 @@ void RB_BindVariableStageImage( const textureStage_t *texture, const float *shad
 			return;
 		}
 
+		// For multithreading. Images will be 1 fame behind..oh well
+		if (texture->image) {
+			// The first time the image will be invalid so wont bind, so bind black image
+			if(texture->image->Bind() == false)
+			{
+				globalImages->blackImage->Bind();
+			}
+			// Save time to display
+			texture->image->cinmaticNextTime = (int)(1000 * ( backEnd.viewDef->floatTime + backEnd.viewDef->renderView.shaderParms[11] ) );
+			// Update next time
+			globalImages->AddAllocList( texture->image );
+		}
+
+/*
 		// offset time by shaderParm[7] (FIXME: make the time offset a parameter of the shader?)
 		// We make no attempt to optimize for multiple identical cinematics being in view, or
 		// for cinematics going at a lower framerate than the renderer.
@@ -160,6 +174,7 @@ void RB_BindVariableStageImage( const textureStage_t *texture, const float *shad
 		} else {
 			globalImages->blackImage->Bind();
 		}
+*/
 	} else {
 		//FIXME: see why image is invalid
 		if (texture->image) {

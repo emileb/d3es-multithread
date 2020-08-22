@@ -1198,6 +1198,10 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 			}
 			ts->cinematic = idCinematic::Alloc();
 			ts->cinematic->InitFromFile( token.c_str(), loop );
+
+			// Due to multithreading we create an image for each cinematic so they can be updated cleanly
+			ts->image = globalImages->AllocImage("cinematic_temp");
+			ts->image->cinematic = ts->cinematic;
 			continue;
 		}
 

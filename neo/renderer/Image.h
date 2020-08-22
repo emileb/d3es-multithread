@@ -157,7 +157,7 @@ public:
 	// automatically enables or disables cube mapping
 	// May perform file loading if the image was not preloaded.
 	// May start a background image read.
-	void		Bind();
+	bool		Bind();
 
 	// for use with fragment programs, doesn't change any enable2D/3D/cube states
 	void		BindFragment();
@@ -248,6 +248,11 @@ public:
 	idImage *			hashNext;				// for hash chains to speed lookup
 
 	int					refCount;				// overall ref count
+
+
+	//If bound to a cinematic
+	idCinematic *		cinematic;
+	int					cinmaticNextTime;
 };
 
 ID_INLINE idImage::idImage() {
@@ -276,6 +281,8 @@ ID_INLINE idImage::idImage() {
 	cacheUsagePrev = cacheUsageNext = NULL;
 	hashNext = NULL;
 	refCount = 0;
+	cinematic = NULL;
+	cinmaticNextTime = 0;
 }
 
 
