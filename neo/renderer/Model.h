@@ -49,7 +49,7 @@ If you have questions concerning this license or the applicable additional terms
 
 // using shorts for triangle indexes can save a significant amount of traffic, but
 // to support the large models that renderBump loads, they need to be 32 bits
-#if 1
+#if 0
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef int glIndex_t;
