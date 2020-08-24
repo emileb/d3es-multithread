@@ -239,25 +239,25 @@ void PortableAction(int state, int action)
         switch (action)
         {
         case PORT_ACT_LEFT:
-            buttonChange(state,UB_LEFT);
+            buttonChange(state, UB_LEFT);
             break;
         case PORT_ACT_RIGHT:
-            buttonChange(state,UB_RIGHT);
+            buttonChange(state, UB_RIGHT);
             break;
         case PORT_ACT_FWD:
-            buttonChange(state,UB_FORWARD);
+            buttonChange(state, UB_FORWARD);
             break;
         case PORT_ACT_BACK:
             buttonChange(state,UB_BACK);
             break;
         case PORT_ACT_MOVE_LEFT:
-            buttonChange(state,UB_MOVELEFT);
+            buttonChange(state, UB_MOVELEFT);
             break;
         case PORT_ACT_MOVE_RIGHT:
-            buttonChange(state,UB_MOVERIGHT);
+            buttonChange(state, UB_MOVERIGHT);
             break;
         case PORT_ACT_ATTACK:
-			buttonChange(state,UB_ATTACK);
+			buttonChange(state, UB_ATTACK);
             break;
         case PORT_ACT_ALT_ATTACK:
 
@@ -266,14 +266,18 @@ void PortableAction(int state, int action)
 
 			break;
         case PORT_ACT_JUMP:
-            buttonChange(state,UB_UP);
+            buttonChange(state, UB_UP);
             break;
         case PORT_ACT_DOWN:
-            buttonChange(state,UB_DOWN);
+            buttonChange(state, UB_DOWN);
             break;
         case PORT_ACT_TOGGLE_CROUCH:
 
             break;
+		case PORT_ACT_SPRINT: // Toggles
+			if(state)
+				getButton(UB_SPEED) ? buttonChange(0, UB_SPEED): buttonChange(1, UB_SPEED);
+			break;
         case PORT_ACT_NEXT_WEP:
             if (state)
 				SetImpuse(UB_IMPULSE14);
@@ -523,21 +527,20 @@ extern "C" int blockGamepad( void );
 
 void Android_GetMovement(int frameTime, int *forward, int *strafe, float *yaw, float *pitch)
 {
-
 	//LOGI("Android_GetMovement frameTime = %d", frameTime);
-
+/*
 	if(abs(forwardmove_android) >= 1)
 	{
-		buttonChange(1,UB_SPEED);
+		buttonChange(1, UB_SPEED);
 	}
 	else
 	{
-		buttonChange(0,UB_SPEED);
+		buttonChange(0, UB_SPEED);
 	}
+*/
 
     int blockMove = blockGamepad() & ANALOGUE_AXIS_FWD;
     int blockLook = blockGamepad() & ANALOGUE_AXIS_PITCH;
-
 
     if( !blockMove )
     {
