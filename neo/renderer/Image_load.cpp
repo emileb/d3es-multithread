@@ -1039,15 +1039,15 @@ void idImage::CopyFramebuffer( int x, int y, int imageWidth, int imageHeight, bo
 		uploadWidth = potWidth;
 		uploadHeight = potHeight;
 		if ( potWidth == imageWidth && potHeight == imageHeight ) {
-			qglCopyTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, x, y, imageWidth, imageHeight, 0 );
+			qglCopyTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, x, y, imageWidth, imageHeight, 0 );
 		} else {
 			byte	*junk;
 			// we need to create a dummy image with power of two dimensions,
 			// then do a qglCopyTexSubImage2D of the data we want
 			// this might be a 16+ meg allocation, which could fail on _alloca
-			junk = (byte *)Mem_Alloc( potWidth * potHeight * 4 );
-			memset( junk, 0, potWidth * potHeight * 4 );		//!@#
-			qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, potWidth, potHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, junk );
+			junk = (byte *)Mem_Alloc( potWidth * potHeight * 3 );
+			memset( junk, 0, potWidth * potHeight * 3 );		//!@#
+			qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, potWidth, potHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, junk );
 
 			Mem_Free( junk );
 
