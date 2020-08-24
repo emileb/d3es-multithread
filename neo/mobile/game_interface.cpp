@@ -192,7 +192,7 @@ void PortableAction(int state, int action)
         else if(action <= PORT_ACT_CUSTOM_17)
              PortableKeyEvent(state, SDL_SCANCODE_A + action - PORT_ACT_CUSTOM_10, 0);
     }
-	else if(( PortableGetScreenMode() == TS_MENU ) || ( PortableGetScreenMode() == TS_BLANK ))
+	else if(( PortableGetScreenMode() == TS_MENU ) )
 	{
 		if (action >= PORT_ACT_MENU_UP && action <= PORT_ACT_MENU_BACK)
 		{
@@ -209,8 +209,29 @@ void PortableAction(int state, int action)
 			if( state )
 			{
 				Android_OnMouse(BUTTON_PRIMARY, ACTION_DOWN, 0, 0);
+				usleep(200 * 1000); // Need this for the PDA to work, needs a frame to react..
 				Android_OnMouse(BUTTON_PRIMARY, ACTION_UP,0, 0);
 			}
+		}
+
+	}
+	else if( PortableGetScreenMode() == TS_PDA )
+	{
+		// Allow gamepad fire button to select in the menu
+		if( action == PORT_ACT_ATTACK )
+		{
+			if( state )
+			{
+				Android_OnMouse(BUTTON_PRIMARY, ACTION_DOWN, 0, 0);
+				usleep(200 * 1000); // Need this for the PDA to work, needs a frame to react..
+				Android_OnMouse(BUTTON_PRIMARY, ACTION_UP,0, 0);
+			}
+		}
+			// Allow pda button to exit the PDA again
+		if(action == PORT_ACT_HELPCOMP )
+		{
+			if (state)
+				SetImpuse(UB_IMPULSE19);
 		}
 	}
     else
@@ -323,10 +344,10 @@ void PortableAction(int state, int action)
 				SetImpuse(UB_IMPULSE19);
 			break;
         case PORT_ACT_QUICKLOAD:
-			PortableKeyEvent(state,SDL_SCANCODE_F9, 0);
+			PortableCommand("loadgame quick");
             break;
         case PORT_ACT_QUICKSAVE:
-			PortableKeyEvent(state,SDL_SCANCODE_F5, 0);
+			PortableCommand("savegame quick");
             break;
         case PORT_ACT_CONSOLE:
             if (state)
@@ -450,7 +471,9 @@ void PortableAutomapControl(float zoom, float x, float y)
 
 touchscreemode_t PortableGetScreenMode()
 {
-	if(inMenu || objectiveSystemActive)
+	if(objectiveSystemActive)
+		return TS_PDA;
+	else if(inMenu)
 		return TS_MENU;
 	else
 		return TS_GAME;
