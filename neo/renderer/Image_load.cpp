@@ -1026,8 +1026,9 @@ void idImage::CopyFramebuffer( int x, int y, int imageWidth, int imageHeight, bo
 	potWidth = MakePowerOfTwo( imageWidth );
 	potHeight = MakePowerOfTwo( imageHeight );
 
-	GetDownsize( imageWidth, imageHeight );
-	GetDownsize( potWidth, potHeight );
+	// Don't do this, otherwise the Grabber gun graphics from ROE do not work properly
+	//GetDownsize( imageWidth, imageHeight );
+	//GetDownsize( potWidth, potHeight );
 
 	//Disabled for OES2
 	//qglReadBuffer( GL_BACK );
