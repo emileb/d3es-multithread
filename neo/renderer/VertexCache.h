@@ -137,6 +137,7 @@ private:
 	int dynamicAllocMaximum;
    	int dynamicAllocMaximum_Index;
 
+	int vboMax;
 
 	vertCache_t *tempBuffers[NUM_VERTEX_FRAMES];    // allocated at startup
 	vertCache_t *tempIndexBuffers[NUM_VERTEX_FRAMES];    // allocated at startup (for Index buffers)

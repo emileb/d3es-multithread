@@ -193,6 +193,9 @@ void* idVertexCache::Position(vertCache_t* buffer) {
 		if( !buffer->frontEndMemory )
 			LOGI("MEMORY NULL");
 		qglGenBuffers(1, &buffer->vbo);
+
+		if(buffer->vbo > vboMax)
+			vboMax = buffer->vbo;
     }
 
 
@@ -267,6 +270,8 @@ void idVertexCache::Init() {
 	staticAllocMaximum = 0;
 	dynamicAllocMaximum = 0;
    	dynamicAllocMaximum_Index = 0;
+
+	vboMax = 0;
 
 	// Allocate the temporary buffers (number of temporary buffers is NUM_VERTEX_FRAMES)
 	for (int i = 0; i < NUM_VERTEX_FRAMES; i++) {
@@ -809,7 +814,7 @@ void idVertexCache::EndFrame() {
 #if 0
 	if(currentFrame % 60 == 0)
 	{
-		common->Printf("Max static = %08d, Max dynamic = %08d, Max dynamicI = %08d\n", staticAllocMaximum, dynamicAllocMaximum, dynamicAllocMaximum_Index);
+		common->Printf("Current static = %d, Max static = %08d, Max dynamic = %08d, Max dynamicI = %08d, vboMax = %d\n", staticAllocTotal, staticAllocMaximum, dynamicAllocMaximum, dynamicAllocMaximum_Index,vboMax);
 	}
 #endif
 }
