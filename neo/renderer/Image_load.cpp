@@ -603,7 +603,7 @@ void idImage::GenerateImage( const byte *pic, int width, int height,
 	}
 	// upload the main image level
 	Bind();
-
+	// LOGI("LOADING IMAGE %d (%s)",texnum,imgName.c_str());
 
 //	qglTexImage2D( GL_TEXTURE_2D, 0, internalFormat, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaledBuffer );
 	char filename[MAX_IMAGE_NAME];
@@ -940,6 +940,7 @@ PurgeImage
 */
 void idImage::PurgeImage() {
 	if ( texnum != TEXTURE_NOT_LOADED ) {
+		// LOGI("DELETING IMAGE %d",texnum);
 		qglDeleteTextures( 1, &texnum );	// this should be the ONLY place it is ever called!
 		texnum = TEXTURE_NOT_LOADED;
 	}
@@ -1196,6 +1197,12 @@ void idImage::UploadScratch( const byte *data, int cols, int rows ) {
 
 void idImage::SetClassification( int tag ) {
 	classification = tag;
+}
+
+
+bool idImage::isLoaded()
+{
+	return (!purgePending && (texnum != TEXTURE_NOT_LOADED));
 }
 
 /*

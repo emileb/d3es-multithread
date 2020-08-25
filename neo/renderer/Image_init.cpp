@@ -1499,12 +1499,11 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 			image->depth = depth;
 			image->levelLoadReferenced = true;
 			
-			// Always add to the alloc list
-			globalImages->AddAllocList( image );
 
 			if ( image_preload.GetBool() && !insideLevelLoad ) {
 				image->referencedOutsideLevelLoad = true;
 				//image->ActuallyLoadImage( false );
+				globalImages->AddAllocList( image );
 				declManager->MediaPrint( "%ix%i %s (reload for mixed referneces)\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
 			}
 			return image;
@@ -1531,13 +1530,11 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 
 	image->levelLoadReferenced = true;
 
-	// Always add to the alloc list
-	globalImages->AddAllocList( image );
-
 	// load it if we aren't in a level preload
 	if ( image_preload.GetBool() && !insideLevelLoad) {
 		image->referencedOutsideLevelLoad = true;
 		//image->ActuallyLoadImage( false );
+		globalImages->AddAllocList( image );
 		declManager->MediaPrint( "%ix%i %s\n", image->uploadWidth, image->uploadHeight, image->imgName.c_str() );
 	} else {
 		declManager->MediaPrint( "%s\n", image->imgName.c_str() );
@@ -1827,7 +1824,7 @@ void idImageManager::BeginLevelLoad() {
 			globalImages->AddPurgeList( image );
 
 			// Need to do this so it doesn't get missed to be added to alloc list
-			image->texnum = idImage::TEXTURE_NOT_LOADED;
+			//image->texnum = idImage::TEXTURE_NOT_LOADED;
 		}
 
 		image->levelLoadReferenced = false;
@@ -1876,7 +1873,7 @@ void idImageManager::EndLevelLoad() {
 			globalImages->AddPurgeList( image );
 
 			// Need to do this so it doesn't get missed to be added to alloc list
-			image->texnum = idImage::TEXTURE_NOT_LOADED;
+			//image->texnum = idImage::TEXTURE_NOT_LOADED;
 
 		} else if ( image->texnum != idImage::TEXTURE_NOT_LOADED ) {
 //			common->Printf( "Keeping %s\n", image->imgName.c_str() );
@@ -1891,7 +1888,7 @@ void idImageManager::EndLevelLoad() {
 			continue;
 		}
 
-		if ( image->levelLoadReferenced && image->texnum == idImage::TEXTURE_NOT_LOADED ) {
+		if ( image->levelLoadReferenced && !image->isLoaded() ) {
 //			common->Printf( "Loading %s\n", image->imgName.c_str() );
 			loadCount++;
 			//image->ActuallyLoadImage( false );
@@ -1899,9 +1896,6 @@ void idImageManager::EndLevelLoad() {
 
 			if ( ( loadCount & 15 ) == 0 ) {
 				session->PacifierUpdate();
-#ifdef __EMSCRIPTEN__
-				emscripten_sleep(1);
-#endif
 			}
 		}
 	}
@@ -1921,7 +1915,7 @@ void idImageManager::AddAllocList( idImage * image )
 
 	if(image)
 	{
-		// LOGI("AddAllocList");
+		//LOGI("AddAllocList");
 		imagesAlloc.Append( image );
 	}
 
@@ -1933,8 +1927,9 @@ void idImageManager::AddPurgeList( idImage * image )
 {
 	if(image)
 	{
-		// LOGI("AddPurgeList");
+	 	//LOGI("AddPurgeList");
 		imagesPurge.Append( image );
+		image->purgePending = true;
 	}
 }
 
@@ -1959,6 +1954,7 @@ idImage * idImageManager::GetNextPurgeImage()
 	{
 		img = imagesPurge[0];
 		imagesPurge.Remove( img );
+		img->purgePending = false;
 	}
 
 	return img;

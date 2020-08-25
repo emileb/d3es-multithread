@@ -665,7 +665,7 @@ void idRenderSystemLocal::BackendThreadTask()
 	// Purge all images
 	while( (img = globalImages->GetNextPurgeImage()) != NULL )
 	{
-		LOGI("IMAGE PURGE!");
+		//LOGI("IMAGE PURGE!");
 		img->PurgeImage();
 	}
 

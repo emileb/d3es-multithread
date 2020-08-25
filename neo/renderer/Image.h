@@ -198,6 +198,9 @@ public:
 		refCount++;
 	};
 
+
+	bool		isLoaded();
+
 //==========================================================
 
 	void		GetDownsize( int &scaled_width, int &scaled_height ) const;
@@ -253,10 +256,14 @@ public:
 	//If bound to a cinematic
 	idCinematic *		cinematic;
 	int					cinmaticNextTime;
+
+
+	bool				purgePending = false;
 };
 
 ID_INLINE idImage::idImage() {
 	texnum = TEXTURE_NOT_LOADED;
+	purgePending = false;
 	type = TT_DISABLED;
 	frameUsed = 0;
 	classification = 0;
