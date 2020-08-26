@@ -83,7 +83,7 @@ class idJointQuat;
 class idJointMat;
 struct dominantTri_s;
 
-const int MIXBUFFER_SAMPLES = 4096*2;
+const int MIXBUFFER_SAMPLES = 4096;
 
 typedef enum {
 	SPEAKER_LEFT = 0,

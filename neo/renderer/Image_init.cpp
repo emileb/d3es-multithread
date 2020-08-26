@@ -1874,7 +1874,6 @@ void idImageManager::EndLevelLoad() {
 
 			// Need to do this so it doesn't get missed to be added to alloc list
 			//image->texnum = idImage::TEXTURE_NOT_LOADED;
-
 		} else if ( image->texnum != idImage::TEXTURE_NOT_LOADED ) {
 //			common->Printf( "Keeping %s\n", image->imgName.c_str() );
 			keepCount++;
