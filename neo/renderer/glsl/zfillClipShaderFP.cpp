@@ -36,12 +36,9 @@ uniform lowp vec4 u_glColor;
         
 void main(void)
 {
-  if (u_alphaTest < 1.0)
-  {
     if (u_alphaTest > (texture2D(u_fragmentMap0, var_TexDiffuse).a * texture2D(u_fragmentMap1, var_TexClip).a) ) {
       discard;
     }
-  }
         
   gl_FragColor = u_glColor;
 }
