@@ -1669,7 +1669,8 @@ idRenderSystemLocal::Shutdown
 void idRenderSystemLocal::Shutdown( void ) {
 	common->Printf( "idRenderSystem::Shutdown()\n" );
 
-	((idRenderSystemLocal*)renderSystem)->BackendThreadWait();
+	//((idRenderSystemLocal*)renderSystem)->BackendThreadWait();
+	((idRenderSystemLocal*)renderSystem)->BackendThreadShutdown();
 
 	R_DoneFreeType( );
 

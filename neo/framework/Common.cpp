@@ -2283,7 +2283,7 @@ void idCommonLocal::InitCommands( void ) {
 	cmdSystem->AddCommand( "setMachineSpec", Com_SetMachineSpec_f, CMD_FL_SYSTEM, "detects system capabilities and sets com_machineSpec to appropriate value" );
 	cmdSystem->AddCommand( "execMachineSpec", Com_ExecMachineSpec_f, CMD_FL_SYSTEM, "execs the appropriate config files and sets cvars based on com_machineSpec" );
 
-#if	!defined( ID_DEDICATED ) && !defined( __ANDROID__ )
+#if	0 // XXX !defined( ID_DEDICATED ) && !defined( __ANDROID__ )
 	// compilers
 	cmdSystem->AddCommand( "dmap", Dmap_f, CMD_FL_TOOL, "compiles a map", idCmdSystem::ArgCompletion_MapName );
 	cmdSystem->AddCommand( "renderbump", RenderBump_f, CMD_FL_TOOL, "renders a bump map", idCmdSystem::ArgCompletion_ModelName );
@@ -2399,7 +2399,7 @@ void idCommonLocal::Frame( void ) {
 		int objectiveActive = ( game && game->ObjectiveSystemActive());
 		int inCinematic = (game && game->InCinematic());
 
-		Android_PumpEvents(inMenu?1:0 + inGameGui?2:0 + objectiveActive?4:0 + inCinematic?8:0);
+		//Android_PumpEvents(inMenu?1:0 + inGameGui?2:0 + objectiveActive?4:0 + inCinematic?8:0);
 
 		// write config file if anything changed
 		WriteConfiguration();
@@ -2720,7 +2720,7 @@ void idCommonLocal::LoadGameDLL( void ) {
 
 	// initialize the game object
 	if ( game != NULL ) {
-		game->Init( gameMod );
+		game->Init( 16 ); // XXX GAME_TYPE_DOOM3
 	}
 }
 

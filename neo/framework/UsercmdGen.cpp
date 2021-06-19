@@ -474,7 +474,8 @@ int	idUsercmdGenLocal::ButtonState( int key ) {
 		return -1;
 	}
 
-	return ( (buttonState[key] > 0) || Android_GetButton(key) ) ? 1 : 0;
+	//return ( (buttonState[key] > 0) || Android_GetButton(key) ) ? 1 : 0;
+	return (buttonState[key] > 0);
 }
 
 /*
@@ -799,7 +800,7 @@ void idUsercmdGenLocal::MakeCurrent( void ) {
 		// get basic movement from joystick
 		JoystickMove();
 
-		int forward,strafe;
+		int forward=0,strafe=0;
 		float yaw = 0;
 		float pitch = 0;
 
@@ -810,7 +811,8 @@ void idUsercmdGenLocal::MakeCurrent( void ) {
 		if(frameTime > 100)
 			frameTime = 100;
 
-		Android_GetMovement( frameTime, &forward, &strafe, &yaw, &pitch );
+		//Android_GetMovement( frameTime, &forward, &strafe, &yaw, &pitch );
+
 		cmd.rightmove = idMath::ClampChar( cmd.rightmove + strafe );
 		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + forward );
 		viewangles[YAW] += yaw;
@@ -1158,7 +1160,7 @@ usercmd_t idUsercmdGenLocal::GetDirectUsercmd( void ) {
 	// process the system joystick events
 	Joystick();
 
-	int imp = Android_GetNextImpulse();
+	/*int imp = Android_GetNextImpulse();
 	if( imp )
 	{
 		if ( !Inhibited()  ) {
@@ -1167,7 +1169,7 @@ usercmd_t idUsercmdGenLocal::GetDirectUsercmd( void ) {
 				cmd.flags ^= UCF_IMPULSE_SEQUENCE;
 			}
 		}
-	}
+	}*/
 
 	// create the usercmd
 	MakeCurrent();

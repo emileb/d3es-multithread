@@ -718,12 +718,12 @@ void Sys_GenerateEvents() {
 	if (s)
 		PushConsoleEvent(s);
 
-	const char * cmd = Android_GetCommand();
+	/*const char * cmd = Android_GetCommand();
 	if(cmd)
 	{
 		cmdSystem->BufferCommandText( CMD_EXEC_NOW, cmd );
 		//cmdSystem->BufferCommandText( CMD_EXEC_NOW, "\n" );
-	}
+	}*/
 
 
 	SDL_PumpEvents();

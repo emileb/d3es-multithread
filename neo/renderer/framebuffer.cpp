@@ -72,25 +72,25 @@ int createProgram(const char * vertexSource, const char *  fragmentSource)
 	int vertexShader = loadShader(GL_VERTEX_SHADER, vertexSource);
 	int pixelShader = loadShader(GL_FRAGMENT_SHADER, fragmentSource);
 
-	int program = glCreateProgram();
+	int program = qglCreateProgram();
 
 	if(program != 0)
 	{
-		glAttachShader(program, vertexShader);
+		qglAttachShader(program, vertexShader);
 		// checkGlError("glAttachShader");
-		glAttachShader(program, pixelShader);
+		qglAttachShader(program, pixelShader);
 		// checkGlError("glAttachShader");
-		glLinkProgram(program);
+		qglLinkProgram(program);
 #define GL_LINK_STATUS 0x8B82
 		int linkStatus[1];
-		glGetProgramiv(program, GL_LINK_STATUS, linkStatus);
+		qglGetProgramiv(program, GL_LINK_STATUS, linkStatus);
 
 		if(linkStatus[0] != GL_TRUE)
 		{
 			LOG("Could not link program: ");
 			char log[256];
 			GLsizei size;
-			glGetProgramInfoLog(program, 256, &size, log);
+			qglGetProgramInfoLog(program, 256, &size, log);
 			LOG("Log: %s", log);
 			//glDeleteProgram(program);
 			program = 0;
@@ -133,12 +133,12 @@ static void createShaders (void)
 
 	r_program = createProgram(vertSource, fragSource);
 
-	glUseProgram(r_program);
+	qglUseProgram(r_program);
 
    // get attrib locations
-	m_positionLoc = glGetAttribLocation(r_program, "a_position");
-	m_texCoordLoc = glGetAttribLocation(r_program, "a_texCoord");
-	m_samplerLoc  = glGetUniformLocation(r_program, "s_texture");
+	m_positionLoc = qglGetAttribLocation(r_program, "a_position");
+	m_texCoordLoc = qglGetAttribLocation(r_program, "a_texCoord");
+	m_samplerLoc  = qglGetUniformLocation(r_program, "s_texture");
 
 	if(m_positionLoc == -1)
 		LOG("Failed to get m_positionLoc");
@@ -149,7 +149,7 @@ static void createShaders (void)
 	if(m_samplerLoc == -1)
 		LOG("Failed to get m_samplerLoc");
 
-	glUniform1i(m_samplerLoc, 0);
+	qglUniform1i(m_samplerLoc, 0);
 }
 
 
@@ -177,38 +177,38 @@ void R_InitFrameBuffer()
 	LOGI("Framebuffer buffer size = [%d, %d]", m_framebuffer_width, m_framebuffer_height);
 
 	// Create texture
-	glGenTextures(1, &m_framebuffer_texture);
-	glBindTexture(GL_TEXTURE_2D, m_framebuffer_texture);
+	qglGenTextures(1, &m_framebuffer_texture);
+	qglBindTexture(GL_TEXTURE_2D, m_framebuffer_texture);
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_framebuffer_width, m_framebuffer_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_framebuffer_width, m_framebuffer_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	if(r_framebufferFilter.GetInteger() == 0)
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}
 	else
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	// Create framebuffer
-	glGenFramebuffers(1, &m_framebuffer);
+	qglGenFramebuffers(1, &m_framebuffer);
 
 	// Create renderbuffer
-	glGenRenderbuffers(1, &m_depthbuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, m_depthbuffer);
+	qglGenRenderbuffers(1, &m_depthbuffer);
+	qglBindRenderbuffer(GL_RENDERBUFFER, m_depthbuffer);
 
 	if(glConfig.depthStencilAvailable)
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES, m_framebuffer_width, m_framebuffer_height);
+		qglRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES, m_framebuffer_width, m_framebuffer_height);
 	else
 	{
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, m_framebuffer_width, m_framebuffer_height);
+		qglRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, m_framebuffer_width, m_framebuffer_height);
 
 		// Need separate Stencil buffer
-		glGenRenderbuffers(1, &m_stencilbuffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, m_stencilbuffer);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, m_framebuffer_width, m_framebuffer_height);
+		qglGenRenderbuffers(1, &m_stencilbuffer);
+		qglBindRenderbuffer(GL_RENDERBUFFER, m_stencilbuffer);
+        qglRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, m_framebuffer_width, m_framebuffer_height);
 	}
 
 	createShaders();
@@ -220,24 +220,24 @@ void R_FrameBufferStart()
 		return;
 
 	// Render to framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    qglBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
+    qglBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer_texture, 0);
+    qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_framebuffer_texture, 0);
 
     // Attach combined depth+stencil
     if(glConfig.depthStencilAvailable)
     {
-    	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
-    	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
+    	qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
+    	qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
 	}
 	else
 	{
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_stencilbuffer);
+		qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
+		qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_stencilbuffer);
 	}
 
-    GLenum result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    GLenum result = qglCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if(result != GL_FRAMEBUFFER_COMPLETE)
 	{
 	    common->Error( "Error binding Framebuffer: %d\n", result );
@@ -250,17 +250,17 @@ void R_FrameBufferEnd()
 	if(m_framebuffer == -1)
 		return;
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+	qglBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	// Bind the texture
-	glBindTexture(GL_TEXTURE_2D, m_framebuffer_texture);
+	qglBindTexture(GL_TEXTURE_2D, m_framebuffer_texture);
 
 	// Unbind any VBOs
 	vertexCache.UnbindIndex();
 	vertexCache.UnbindVertex();
 
-	glUseProgram(r_program);
+	qglUseProgram(r_program);
 
 	GLfloat vert[] =
 	{
@@ -287,30 +287,30 @@ void R_FrameBufferEnd()
 		smax, 0.0f  // TexCoord 3
 	};
 
-	glVertexAttribPointer(m_positionLoc, 3, GL_FLOAT,
+	qglVertexAttribPointer(m_positionLoc, 3, GL_FLOAT,
 				  false,
 				  3 * 4,
 				  vert);
 
-	glVertexAttribPointer(m_texCoordLoc, 2, GL_FLOAT,
+	qglVertexAttribPointer(m_texCoordLoc, 2, GL_FLOAT,
 						  false,
 						  2 * 4,
 						  texVert);
 
-	glEnableVertexAttribArray(m_positionLoc);
-	glEnableVertexAttribArray(m_texCoordLoc);
+	qglEnableVertexAttribArray(m_positionLoc);
+	qglEnableVertexAttribArray(m_texCoordLoc);
 
 
 	// Set the sampler texture unit to 0
-	glUniform1i(m_samplerLoc, 0);
+	qglUniform1i(m_samplerLoc, 0);
 
-	glViewport (0, 0, glConfig.vidWidthReal, glConfig.vidHeightReal );
+	qglViewport (0, 0, glConfig.vidWidthReal, glConfig.vidHeightReal );
 
-	glDisable(GL_BLEND);
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_DEPTH_TEST);
+	qglDisable(GL_BLEND);
+	qglDisable(GL_SCISSOR_TEST);
+	qglDisable(GL_DEPTH_TEST);
 
-	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+	qglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
 
 
