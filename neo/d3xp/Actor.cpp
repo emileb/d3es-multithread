@@ -474,6 +474,10 @@ idActor::idActor( void ) {
 
 	enemyNode.SetOwner( this );
 	enemyList.SetOwner( this );
+#ifdef AIM_ASSIST
+	aimAssistNode.SetOwner( this );
+	aimAssistNode.AddToEnd( gameLocal.aimAssistEntities );
+#endif
 
 #ifdef _D3XP
 	damageCap = -1;
@@ -509,7 +513,9 @@ idActor::~idActor( void ) {
 			ent->PostEventMS( &EV_Remove, 0 );
 		}
 	}
-
+#ifdef AIM_ASSIST
+	aimAssistNode.Remove();
+#endif
 	ShutdownThreads();
 }
 

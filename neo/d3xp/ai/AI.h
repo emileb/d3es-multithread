@@ -359,6 +359,8 @@ protected:
 	idVec3					projectileGravity;
 	idEntityPtr<idProjectile> projectile;
 	idStr					attack;
+	//Added for the LM
+	idVec3					homingMissileGoal;
 
 	// chatter/talking
 	const idSoundShader		*chat_snd;
@@ -456,7 +458,13 @@ protected:
 	virtual	void			DormantEnd( void );		// called when entity wakes from being dormant
 	void					Think( void );
 	void					Activate( idEntity *activator );
+#ifdef AIM_ASSIST
+public:
+#endif
 	int						ReactionTo( const idEntity *ent );
+#ifdef AIM_ASSIST
+protected:
+#endif
 	bool					CheckForEnemy( void );
 	void					EnemyDead( void );
 	virtual bool			CanPlayChatterSounds( void ) const;
@@ -586,6 +594,10 @@ protected:
 	void					Event_FireMissileAtTarget( const char *jointname, const char *targetname );
 	void					Event_LaunchMissile( const idVec3 &muzzle, const idAngles &ang );
 #ifdef _D3XP
+
+	//Added for the LM
+	void					Event_LaunchHomingMissile();
+	void					Event_SetHomingMissileGoal();
 	void					Event_LaunchProjectile( const char *entityDefName );
 #endif
 	void					Event_AttackMelee( const char *meleeDefName );

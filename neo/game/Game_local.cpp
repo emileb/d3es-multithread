@@ -289,7 +289,7 @@ idGameLocal::Init
   initialize the game object, only happens once at startup, not each level load
 ============
 */
-void idGameLocal::Init( void ) {
+void idGameLocal::Init( int gameMod ) {
 	const idDict *dict;
 	idAAS *aas;
 
@@ -1226,6 +1226,10 @@ void idGameLocal::InitFromNewMap( const char *mapName, idRenderWorld *renderWorl
 	gameRenderWorld = renderWorld;
 	gameSoundWorld = soundWorld;
 
+#ifdef AIM_ASSIST
+	aimAssistEntities.Clear();
+#endif
+
 	LoadMap( mapName, randseed );
 
 	InitScriptForMap();
@@ -1267,6 +1271,10 @@ bool idGameLocal::InitFromSaveGame( const char *mapName, idRenderWorld *renderWo
 	idRestoreGame savegame( saveGameFile );
 
 	savegame.ReadBuildNumber();
+
+#ifdef AIM_ASSIST
+	aimAssistEntities.Clear();
+#endif
 
 	// DG: I enhanced the information in savegames a bit for dhewm3 1.5.1
 	//     for which I bumped th BUILD_NUMBER to 1305
@@ -4446,3 +4454,64 @@ idGameLocal::GetMapLoadingGUI
 ===============
 */
 void idGameLocal::GetMapLoadingGUI( char gui[ MAX_STRING_CHARS ] ) { }
+
+#ifdef __ANDROID__
+int idGameLocal::GetExtraData( ExtraData cmd )
+{
+	switch (cmd)
+	{
+		case GET_GUI_ACTIVE:
+			return !!( GetLocalPlayer() && GetLocalPlayer()->GuiActive() );
+		case GET_IN_CINEMATIC:
+			return inCinematic;
+		case GET_OBJECTIVE_ACTIVE:
+			return !!( GetLocalPlayer() && GetLocalPlayer()->objectiveSystemOpen );
+	}
+
+	return -1;
+}
+#endif
+
+#ifdef AIM_ASSIST
+/*
+========================
+idGameLocal::GetAimAssistAngles
+========================
+*/
+void idGameLocal::GetAimAssistAngles( idAngles & angles ) {
+	angles.Zero();
+
+	// Take a look at serializing this to the clients
+	idPlayer * player = GetLocalPlayer();
+	if ( player == NULL ) {
+		return;
+	}
+
+	idAimAssist * aimAssist = player->GetAimAssist();
+	if ( aimAssist == NULL ) {
+		return;
+	}
+
+	aimAssist->GetAngleCorrection( angles );
+}
+
+/*
+========================
+idGameLocal::GetAimAssistSensitivity
+========================
+*/
+float idGameLocal::GetAimAssistSensitivity() {
+	// Take a look at serializing this to the clients
+	idPlayer * player = GetLocalPlayer();
+	if ( player == NULL ) {
+		return 1.0f;
+	}
+
+	idAimAssist * aimAssist = player->GetAimAssist();
+	if ( aimAssist == NULL ) {
+		return 1.0f;
+	}
+
+	return aimAssist->GetFrictionScalar();
+}
+#endif

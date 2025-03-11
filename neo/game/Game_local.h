@@ -235,6 +235,9 @@ public:
 	idWorldspawn *			world;					// world entity
 	idLinkList<idEntity>	spawnedEntities;		// all spawned entities
 	idLinkList<idEntity>	activeEntities;			// all thinking entities (idEntity::thinkFlags != 0)
+#ifdef AIM_ASSIST
+	idLinkList<idEntity>	aimAssistEntities;
+#endif
 	int						numEntitiesToDeactivate;// number of entities that became inactive in current frame
 	bool					sortPushers;			// true if active lists needs to be reordered to place pushers at the front
 	bool					sortTeamMasters;		// true if active lists needs to be reordered to place physics team masters before their slaves
@@ -298,7 +301,7 @@ public:
 
 							idGameLocal();
 
-	virtual void			Init( void );
+	virtual void			Init( int gameMod );
 	virtual void			Shutdown( void );
 	virtual void			SetLocalClient( int clientNum );
 	virtual void			ThrottleUserInfo( void );
@@ -338,6 +341,10 @@ public:
 
 	virtual bool			DownloadRequest( const char *IP, const char *guid, const char *paks, char urls[ MAX_STRING_CHARS ] );
 
+#ifdef AIM_ASSIST
+	virtual void			GetAimAssistAngles( idAngles & angles );
+	virtual float			GetAimAssistSensitivity();
+#endif
 	// ---------------------- Public idGameLocal Interface -------------------
 
 	void					Printf( const char *fmt, ... ) const id_attribute((format(printf,2,3)));
@@ -553,6 +560,10 @@ private:
 	void					UpdateLagometer( int aheadOfServer, int dupeUsercmds );
 
 	virtual void			GetMapLoadingGUI( char gui[ MAX_STRING_CHARS ] );
+
+#ifdef __ANDROID__
+	virtual int				GetExtraData( ExtraData cmd );
+#endif
 };
 
 //============================================================================

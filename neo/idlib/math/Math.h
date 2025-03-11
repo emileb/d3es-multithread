@@ -216,6 +216,7 @@ public:
 	static const float			M_MS2SEC;					// milliseconds to seconds multiplier
 	static const float			INFINITY;					// huge number which should be larger than any valid number used
 	static const float			FLT_EPSILON;				// smallest positive number such that 1.0+FLT_EPSILON != 1.0
+	static const float			FLT_SMALLEST_NON_DENORMAL;	// smallest non-denormal 32-bit floating point value
 
 private:
 	enum {
@@ -927,6 +928,17 @@ ID_INLINE int idMath::FloatHash( const float *array, const int numFloats ) {
 		hash ^= ptr[i];
 	}
 	return hash;
+}
+
+template< typename T >
+inline T Lerp( const T from, const T to, float f ) {
+	return from + ( ( to - from ) * f );
+}
+
+
+template<>
+inline int Lerp( const int from, const int to, float f ) {
+	return idMath::Ftoi( (float) from + ( ( (float) to - (float) from ) * f ) );
 }
 
 #endif /* !__MATH_MATH_H__ */

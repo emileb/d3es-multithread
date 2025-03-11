@@ -27,7 +27,7 @@
 #define OF(x) x
 #endif
 
-#if (!defined(_WIN32)) && (!defined(WIN32)) && (!defined(__APPLE__))
+#if (!defined(_WIN32)) && (!defined(WIN32)) && (!defined(__APPLE__)) && (!defined(__ANDROID__))
 
   // Linux needs this to support file operation on files larger then 4+GB
   // But might need better if/def to select just the platforms that needs them.
@@ -52,6 +52,10 @@
 //#include <zlib.h>
 #include "../miniz/miniz.h" // DG: use miniz instead of zlib
 #include "../miniz/minizconf.h"
+
+#ifdef __ANDROID__
+#define USE_FILE32API
+#endif
 
 #if defined(USE_FILE32API)
 #define fopen64 fopen

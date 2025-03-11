@@ -345,6 +345,43 @@ private:
 };
 
 
+
+//added for LM
+
+/*
+===============================================================================
+idFuncShootProjectile
+===============================================================================
+*/
+
+class idFuncShootProjectile : public idStaticEntity {
+public:
+	CLASS_PROTOTYPE( idFuncShootProjectile );
+
+	idFuncShootProjectile();
+
+	void						Save( idSaveGame *savefile ) const;
+	void						Restore( idRestoreGame *savefile );
+
+	void						Spawn();
+	void						Event_Activate( idEntity *activator );
+
+	virtual void				Think();
+
+	// DG: at least in vanilla Doom3 the arguments should really be idBitMsgDelta, not idBitMsg!
+	virtual void				WriteToSnapshot( idBitMsgDelta &msg ) const;
+	virtual void				ReadFromSnapshot( const idBitMsgDelta &msg );
+
+private:
+	int							mRespawnDelay;
+	int							mRespawnTime;
+	float						mShootSpeed;
+	idVec3						mShootDir;
+	idStr						mEntityDefName;
+	idEntityPtr< idEntity >		mLastProjectile;
+
+};
+
 /*
 ===============================================================================
 

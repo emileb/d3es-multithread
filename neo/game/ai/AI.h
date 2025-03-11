@@ -428,7 +428,13 @@ protected:
 	virtual	void			DormantEnd( void );		// called when entity wakes from being dormant
 	void					Think( void );
 	void					Activate( idEntity *activator );
+#ifdef AIM_ASSIST
+public:
+#endif
 	int						ReactionTo( const idEntity *ent );
+#ifdef AIM_ASSIST
+protected:
+#endif
 	bool					CheckForEnemy( void );
 	void					EnemyDead( void );
 	virtual bool			CanPlayChatterSounds( void ) const;

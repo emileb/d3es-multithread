@@ -138,7 +138,6 @@ typedef enum {
 typedef enum {
 	TT_DISABLED,
 	TT_2D,
-	TT_3D,
 	TT_CUBIC,
 	TT_RECT
 } textureType_t;
@@ -159,7 +158,7 @@ public:
 	// automatically enables or disables cube mapping or texture3D
 	// May perform file loading if the image was not preloaded.
 	// May start a background image read.
-	void		Bind();
+	bool		Bind();
 
 	// for use with fragment programs, doesn't change any enable2D/3D/cube states
 	void		BindFragment();
@@ -172,19 +171,15 @@ public:
 	// These perform an implicit Bind() on the current texture unit
 	// FIXME: should we implement cinematics this way, instead of with explicit calls?
 	void		GenerateImage( const byte *pic, int width, int height,
-					   textureFilter_t filter, bool allowDownSize,
-					   textureRepeat_t repeat, textureDepth_t depth );
-	void		Generate3DImage( const byte *pic, int width, int height, int depth,
-						textureFilter_t filter, bool allowDownSize,
-						textureRepeat_t repeat, textureDepth_t minDepth );
+	                           textureFilter_t filter, bool allowDownSize,
+	                           textureRepeat_t repeat, textureDepth_t depth );
 	void		GenerateCubeImage( const byte *pic[6], int size,
 						textureFilter_t filter, bool allowDownSize,
 						textureDepth_t depth );
 
 	void		CopyFramebuffer( int x, int y, int width, int height, bool useOversizedBuffer );
 
-	void		CopyDepthbuffer( int x, int y, int width, int height, bool useOversizedBuffer );
-
+	void		CopyDepthbuffer( int x, int y, int width, int height );
 
 	void		UploadScratch( const byte *pic, int width, int height );
 
@@ -198,25 +193,20 @@ public:
 	void		Print() const;
 
 	// check for changed timestamp on disk and reload if necessary
-	void		Reload( bool checkPrecompressed, bool force );
+	void		Reload( bool force );
 
 	void		AddReference()				{ refCount++; };
+
+	bool		isLoaded();
 
 //==========================================================
 
 	void		GetDownsize( int &scaled_width, int &scaled_height ) const;
 	void		MakeDefault();	// fill with a grid pattern
 	void		SetImageFilterAndRepeat() const;
-	bool		ShouldImageBePartialCached();
-	void		WritePrecompressedImage();
-	bool		CheckPrecompressedImage( bool fullLoad );
-	void		UploadPrecompressedImage( byte *data, int len );
-	void		ActuallyLoadImage( bool checkForPrecompressed, bool fromBackEnd );
-	void		StartBackgroundImageLoad();
+	void		ActuallyLoadImage( bool fromBind );
 	int			BitsForInternalFormat( int internalFormat ) const;
 	void		UploadCompressedNormalMap( int width, int height, const byte *rgba, int mipLevel );
-	GLenum		SelectInternalFormat( const byte **dataPtrs, int numDataPtrs, int width, int height,
-									 textureDepth_t minimumDepth ) const;
 	void		ImageProgramStringToCompressedFileName( const char *imageProg, char *fileName ) const;
 	int			NumLevelsForImageSize( int width, int height ) const;
 
@@ -228,8 +218,6 @@ public:
 	int					bindCount;				// incremented each bind
 
 	// background loading information
-	idImage				*partialImage;			// shrunken, space-saving version
-	bool				isPartialImage;			// true if this is pointed to by another image
 	bool				backgroundLoadInProgress;	// true if another thread is reading the complete d3t file
 	backgroundDownload_t	bgl;
 	idImage *			bglNext;				// linked from tr.backgroundImageLoads
@@ -245,7 +233,6 @@ public:
 
 	bool				referencedOutsideLevelLoad;
 	bool				levelLoadReferenced;	// for determining if it needs to be purged
-	bool				precompressedFile;		// true when it was loaded from a .d3t file
 	bool				defaulted;				// true if the default image was generated because a file couldn't be loaded
 	ID_TIME_T				timestamp;				// the most recent of all images used in creation, for reloadImages command
 
@@ -262,13 +249,20 @@ public:
 	idImage *			hashNext;				// for hash chains to speed lookup
 
 	int					refCount;				// overall ref count
+
+
+	//If bound to a cinematic
+	idCinematic *		cinematic;
+	int					cinmaticNextTime;
+
+
+	bool				purgePending = false;
 };
 
 ID_INLINE idImage::idImage() {
 	texnum = TEXTURE_NOT_LOADED;
-	partialImage = NULL;
+	purgePending = false;
 	type = TT_DISABLED;
-	isPartialImage = false;
 	frameUsed = 0;
 	classification = 0;
 	backgroundLoadInProgress = false;
@@ -284,7 +278,6 @@ ID_INLINE idImage::idImage() {
 	cubeFiles = CF_2D;
 	referencedOutsideLevelLoad = false;
 	levelLoadReferenced = false;
-	precompressedFile = false;
 	defaulted = false;
 	timestamp = 0;
 	bindCount = 0;
@@ -293,6 +286,8 @@ ID_INLINE idImage::idImage() {
 	cacheUsagePrev = cacheUsageNext = NULL;
 	hashNext = NULL;
 	refCount = 0;
+	cinematic = NULL;
+	cinmaticNextTime = 0;
 }
 
 
@@ -326,10 +321,6 @@ public:
 	// The callback function should call one of the idImage::Generate* functions to fill in the data
 	idImage *			ImageFromFunction( const char *name, void (*generatorFunction)( idImage *image ));
 
-	// called once a frame to allow any background loads that have been completed
-	// to turn into textures.
-	void				CompleteBackgroundImageLoads();
-
 	// returns the number of bytes of image data bound in the previous frame
 	int					SumOfUsedImages();
 
@@ -358,6 +349,12 @@ public:
 	// Called only by renderSystem::EndLevelLoad
 	void				EndLevelLoad();
 
+	void				AddAllocList(idImage * image);
+	void				AddPurgeList(idImage * iamge);
+
+	idImage *			GetNextAllocImage();
+	idImage *			GetNextPurgeImage();
+
 	// used to clear and then write the dds conversion batch file
 	void				StartBuild();
 	void				FinishBuild( bool removeDups = false );
@@ -369,30 +366,18 @@ public:
 	static idCVar		image_roundDown;			// round bad sizes down to nearest power of two
 	static idCVar		image_colorMipLevels;		// development aid to see texture mip usage
 	static idCVar		image_downSize;				// controls texture downsampling
-	static idCVar		image_useCompression;		// 0 = force everything to high quality
 	static idCVar		image_filter;				// changes texture filtering on mipmapped images
 	static idCVar		image_anisotropy;			// set the maximum texture anisotropy if available
-	static idCVar		image_lodbias;				// change lod bias on mipmapped images
-	static idCVar		image_useAllFormats;		// allow alpha/intensity/luminance/luminance+alpha
-	static idCVar		image_usePrecompressedTextures;	// use .dds files if present
-	static idCVar		image_writePrecompressedTextures; // write .dds files if necessary
 	static idCVar		image_writeNormalTGA;		// debug tool to write out .tgas of the final normal maps
 	static idCVar		image_writeNormalTGAPalletized;		// debug tool to write out palletized versions of the final normal maps
 	static idCVar		image_writeTGA;				// debug tool to write out .tgas of the non normal maps
-	static idCVar		image_useNormalCompression;	// 1 = use 256 color compression for normal maps if available, 2 = use rxgb compression
-	static idCVar		image_useOffLineCompression; // will write a batch file with commands for the offline compression
 	static idCVar		image_preload;				// if 0, dynamically load all images
-	static idCVar		image_cacheMinK;			// maximum K of precompressed files to read at specification time,
-													// the remainder will be dynamically cached
-	static idCVar		image_cacheMegs;			// maximum bytes set aside for temporary loading of full-sized precompressed images
-	static idCVar		image_useCache;				// 1 = do background load image caching
 	static idCVar		image_showBackgroundLoads;	// 1 = print number of outstanding background loads
 	static idCVar		image_forceDownSize;		// allows the ability to force a downsize
 	static idCVar		image_downSizeSpecular;		// downsize specular
 	static idCVar		image_downSizeSpecularLimit;// downsize specular limit
 	static idCVar		image_downSizeBump;			// downsize bump maps
 	static idCVar		image_downSizeBumpLimit;	// downsize bump limit
-	static idCVar		image_ignoreHighQuality;	// ignore high quality on materials
 	static idCVar		image_downSizeLimit;		// downsize diffuse limit
 
 	// built-in images
@@ -418,9 +403,6 @@ public:
 	idImage *			specular2DTableImage;		// 2D intensity texture with our specular function with variable specularity
 	idImage *			borderClampImage;			// white inside, black outside
 
-
-	idImage *			currentDepthImage;			// #3877. Allow shaders to access scene depth
-
 	//--------------------------------------------------------
 
 	idImage *			AllocImage( const char *name );
@@ -431,6 +413,9 @@ public:
 	idStrList			ddsList;
 	idHashIndex			ddsHash;
 
+	idList<idImage*>	imagesAlloc; //List for the backend thread
+	idList<idImage*>	imagesPurge; //List for the backend thread
+
 	bool				insideLevelLoad;			// don't actually load images now
 
 	byte				originalToCompressed[256];	// maps normal maps to 8 bit textures
@@ -440,7 +425,6 @@ public:
 	GLenum				textureMinFilter;
 	GLenum				textureMaxFilter;
 	float				textureAnisotropy;
-	float				textureLODBias;
 
 	idImage *			imageHashTable[FILE_HASH_SIZE];
 
@@ -468,7 +452,7 @@ FIXME: make an "imageBlock" type to hold byte*,width,height?
 byte *R_Dropsample( const byte *in, int inwidth, int inheight,
 							int outwidth, int outheight );
 byte *R_ResampleTexture( const byte *in, int inwidth, int inheight,
-							int& outwidth, int& outheight );
+							int outwidth, int outheight );
 byte *R_MipMapWithAlphaSpecularity( const byte *in, int width, int height );
 byte *R_MipMap( const byte *in, int width, int height, bool preserveBorder );
 byte *R_MipMap3D( const byte *in, int width, int height, int depth, bool preserveBorder );

@@ -99,6 +99,7 @@ idSoundSystem	*soundSystem  = &soundSystemLocal;
 
 enum { D3_ALC_ATTRLIST_LEN = 6 }; // currently we set at most two setting-pairs + terminating 0, 0
 
+#ifndef __ANDROID__
 static ALCint cvarToAlcBoolish( const idCVar& cvar )
 {
 	int val = cvar.GetInteger();
@@ -126,6 +127,11 @@ static void SetAlcAttrList( ALCint attrList[D3_ALC_ATTRLIST_LEN] )
 	attrList[idx++] = 0;
 	attrList[idx++] = 0;
 }
+#endif
+
+#ifdef __ANDROID__
+extern "C" void OpenSL_android_set_pause( ALCdevice_struct *Device, int pause );
+#endif
 
 /*
 ===============
@@ -443,7 +449,7 @@ void idSoundSystemLocal::Init() {
 			alOutputModeAvailable = alcIsExtensionPresent( openalDevice, "ALC_SOFT_output_mode" );
 
 			ALCint attrList[D3_ALC_ATTRLIST_LEN] = {};
-			SetAlcAttrList( attrList );
+//			SetAlcAttrList( attrList );
 
 			s_alHRTF.ClearModified();
 			s_alOutputLimiter.ClearModified();
@@ -677,7 +683,7 @@ bool idSoundSystemLocal::ResetALDevice()
 	}
 
 	ALCint attrList[D3_ALC_ATTRLIST_LEN] = {};
-	SetAlcAttrList( attrList );
+//	SetAlcAttrList( attrList );
 
 	if ( alcResetDeviceSOFT( openalDevice, attrList ) ) {
 		common->Printf( "OpenAL: resetting device succeeded!\n" );
@@ -689,6 +695,15 @@ bool idSoundSystemLocal::ResetALDevice()
 	return false;
 }
 
+
+
+#ifdef __ANDROID__
+void idSoundSystemLocal::Pause( bool pause )
+{
+	if( openalDevice )
+		OpenSL_android_set_pause( openalDevice, pause );
+}
+#endif
 
 /*
 ===============

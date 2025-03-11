@@ -357,8 +357,8 @@ const char *idUserInterfaceLocal::HandleEvent( const sysEvent_t *event, int _tim
 			// DG: this is a fullscreen GUI, scale the mousedelta added to cursorX/Y
 			//     by 640/w, because the GUI pretends that everything is 640x480
 			//     even if the actual resolution is higher => mouse moved too fast
-			float w = glConfig.winWidth;
-			float h = glConfig.winHeight;
+			float w = glConfig.vidWidth;
+			float h = glConfig.vidHeight;
 			if( w <= 0.0f || h <= 0.0f ) {
 				w = VIRTUAL_WIDTH;
 				h = VIRTUAL_HEIGHT;

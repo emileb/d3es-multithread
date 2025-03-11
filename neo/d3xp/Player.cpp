@@ -1712,6 +1712,10 @@ void idPlayer::Init( void ) {
 	MPAimFadeTime		= 0;
 	MPAimHighlight		= false;
 
+#ifdef AIM_ASSIST
+	aimAssist.Init( this );
+#endif
+
 	if ( hud ) {
 		hud->HandleNamedEvent( "aim_clear" );
 	}
@@ -1908,6 +1912,14 @@ void idPlayer::Spawn( void ) {
 	inventory.selPDA = 0;
 
 	if ( !gameLocal.isMultiplayer ) {
+
+		if( gameMod == GAME_TYPE_DOOM3_LE )
+		{
+        	int startingHealth = gameLocal.world->spawnArgs.GetInt( "startingHealth", "0");
+        	if ( (startingHealth > 0) && (health > startingHealth) ) {
+            	health = startingHealth;
+        	}
+		}
 		if ( g_skill.GetInteger() < 2 ) {
 			if ( health < 25 ) {
 				health = 25;
@@ -2503,6 +2515,10 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	savefile->ReadBool( leader );
 	savefile->ReadInt( lastSpectateChange );
 	savefile->ReadInt( lastTeleFX );
+
+#ifdef AIM_ASSIST
+	aimAssist.Init( this );
+#endif
 
 	// set the pm_ cvars
 	const idKeyValue	*kv;
@@ -7322,6 +7338,11 @@ Called every tic for each player
 */
 void idPlayer::Think( void ) {
 	renderEntity_t *headRenderEnt;
+
+#ifdef AIM_ASSIST
+	if ( respawning == false )
+		aimAssist.Update(); // BORKEN
+#endif
 
 	UpdatePlayerIcons();
 

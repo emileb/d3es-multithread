@@ -341,20 +341,23 @@ R_FreeStaticTriSurfVertexCaches
 ==============
 */
 void R_FreeStaticTriSurfVertexCaches( srfTriangles_t *tri ) {
+	// We must only free private caches, not those that may be shared with a parent
+
+	// If there is no ambient(ie. parent) surface, then we are sure the cache is private
 	if ( tri->ambientSurface == NULL ) {
 		// this is a real model surface
+		if (tri->ambientCache) {
 		vertexCache.Free( tri->ambientCache );
 		tri->ambientCache = NULL;
-	} else {
-		// this is a light interaction surface that references
-		// a different ambient model surface
-		vertexCache.Free( tri->lightingCache );
-		tri->lightingCache = NULL;
 	}
+	}
+
 	if ( tri->indexCache ) {
 		vertexCache.Free( tri->indexCache );
 		tri->indexCache = NULL;
 	}
+
+	// shadowCache is private if there is vertexes in the tri, otherwise it is shared
 	if ( tri->shadowCache && ( tri->shadowVertexes != NULL || tri->verts != NULL ) ) {
 		// if we don't have tri->shadowVertexes, these are a reference to a
 		// shadowCache on the original surface, which a vertex program
@@ -790,10 +793,7 @@ R_CreateDupVerts
 void R_CreateDupVerts( srfTriangles_t *tri ) {
 	int i;
 
-	// DG: use Mem_MallocA() instead of _alloca16() to avoid stack overflows with big models
-	bool remapOnStack;
-	int *remap = (int *)Mem_MallocA( tri->numVerts * sizeof( remap[0] ), remapOnStack );
-
+	int *remap = (int *)Mem_Alloc16( tri->numVerts * sizeof( remap[0] ) );
 	// initialize vertex remap in case there are unused verts
 	for ( i = 0; i < tri->numVerts; i++ ) {
 		remap[i] = i;
@@ -805,8 +805,7 @@ void R_CreateDupVerts( srfTriangles_t *tri ) {
 	}
 
 	// create duplicate vertex index based on the vertex remap
-	bool tempDupVertsOnStack;
-	int *tempDupVerts = (int *)Mem_MallocA( tri->numVerts * 2 * sizeof( tempDupVerts[0] ), tempDupVertsOnStack );
+	int * tempDupVerts = (int *) Mem_Alloc16( tri->numVerts * 2 * sizeof( tempDupVerts[0] ) );
 
 	tri->numDupVerts = 0;
 	for ( i = 0; i < tri->numVerts; i++ ) {
@@ -817,6 +816,7 @@ void R_CreateDupVerts( srfTriangles_t *tri ) {
 		}
 	}
 
+
 	if(tri->numDupVerts > 0) {
 		tri->dupVerts = triDupVertAllocator.Alloc( tri->numDupVerts * 2 );
 		memcpy( tri->dupVerts, tempDupVerts, tri->numDupVerts * 2 * sizeof( tri->dupVerts[0] ) ); // runtime error: null pointer passed as argument 1, which is declared to never be null
@@ -824,8 +824,8 @@ void R_CreateDupVerts( srfTriangles_t *tri ) {
 		tri->dupVerts = NULL;
 	}
 
-	Mem_FreeA( remap, remapOnStack );
-	Mem_FreeA( tempDupVerts, tempDupVertsOnStack );
+	Mem_Free16(remap);
+	Mem_Free16(tempDupVerts);
 }
 
 /*
@@ -1286,10 +1286,7 @@ static void	R_DuplicateMirroredVertexes( srfTriangles_t *tri ) {
 	int				totalVerts;
 	int				numMirror;
 
-	// DG: use Mem_MallocA() instead of _alloca16() to avoid stack overflows with big models
-	bool tvertsOnStack;
-	tverts = (tangentVert_t *)Mem_MallocA( tri->numVerts * sizeof( *tverts ), tvertsOnStack );
-
+	tverts = (tangentVert_t *)_alloca16( tri->numVerts * sizeof( *tverts ) );
 	memset( tverts, 0, tri->numVerts * sizeof( *tverts ) );
 
 	// determine texture polarity of each surface
@@ -1319,7 +1316,6 @@ static void	R_DuplicateMirroredVertexes( srfTriangles_t *tri ) {
 	// now create the new list
 	if ( totalVerts == tri->numVerts ) {
 		tri->mirroredVerts = NULL;
-		Mem_FreeA( tverts, tvertsOnStack );
 		return;
 	}
 
@@ -1355,8 +1351,6 @@ static void	R_DuplicateMirroredVertexes( srfTriangles_t *tri ) {
 	}
 
 	tri->numVerts = totalVerts;
-
-	Mem_FreeA( tverts, tvertsOnStack );
 }
 
 /*
@@ -1399,10 +1393,14 @@ void R_DeriveTangentsWithoutNormals( srfTriangles_t *tri ) {
 	faceTangents_t	*ft;
 	idDrawVert		*vert;
 
-	// DG: use Mem_MallocA() instead of _alloca16() to avoid stack overflows with big models
+	// DG: windows only has a 1MB stack and it could happen that we try to allocate >1MB here
+	//     (in lost mission mod, game/le_hell map), causing a stack overflow
+	//     to prevent that, use heap allocation if it's >600KB
 	size_t allocaSize = sizeof(faceTangents[0]) * tri->numIndexes/3;
-	bool faceTangentsOnStack;
-	faceTangents = (faceTangents_t *)Mem_MallocA( allocaSize, faceTangentsOnStack );
+	if(allocaSize < 600000)
+		faceTangents = (faceTangents_t *)_alloca16( allocaSize );
+	else
+		faceTangents = (faceTangents_t *)Mem_Alloc16( allocaSize );
 
 	R_DeriveFaceTangents( tri, faceTangents );
 
@@ -1460,7 +1458,8 @@ void R_DeriveTangentsWithoutNormals( srfTriangles_t *tri ) {
 
 	tri->tangentsCalculated = true;
 
-	Mem_FreeA( faceTangents, faceTangentsOnStack );
+	if(allocaSize >= 600000)
+		Mem_Free16( faceTangents );
 }
 
 static ID_INLINE void VectorNormalizeFast2( const idVec3 &v, idVec3 &out) {
@@ -1693,12 +1692,8 @@ void R_DeriveTangents( srfTriangles_t *tri, bool allocFacePlanes ) {
 
 #if 1
 
-	// ok, this is also true if they're not on the stack but from tri->facePlanes
-	// (either way, Mem_FreeA() mustn't free() them)
-	bool planesOnStack = true;
 	if ( !planes ) {
-		// DG: use Mem_MallocA() instead of _alloca16() to avoid stack overflows with big models
-		planes = (idPlane *)Mem_MallocA( ( tri->numIndexes / 3 ) * sizeof( planes[0] ), planesOnStack );
+		planes = (idPlane *)_alloca16( ( tri->numIndexes / 3 ) * sizeof( planes[0] ) );
 	}
 
 	SIMDProcessor->DeriveTangents( planes, tri->verts, tri->numVerts, tri->indexes, tri->numIndexes );
@@ -1858,8 +1853,6 @@ void R_DeriveTangents( srfTriangles_t *tri, bool allocFacePlanes ) {
 
 	tri->tangentsCalculated = true;
 	tri->facePlanesCalculated = true;
-
-	Mem_FreeA( planes, planesOnStack );
 }
 
 /*
