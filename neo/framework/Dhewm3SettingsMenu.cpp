@@ -1617,6 +1617,7 @@ static CVarOption videoOptionsImmediately[] = {
 			if ( curVsync == 2 ) {
 				curVsync = -1;
 			}
+#if 0
 			if ( GLimp_SetSwapInterval( curVsync ) ) {
 				r_swapInterval.SetInteger( curVsync );
 				// this was just set with GLimp_SetSwapInterval(), no reason to set it again in R_CheckCvars()
@@ -1624,6 +1625,7 @@ static CVarOption videoOptionsImmediately[] = {
 			} else {
 				D3::ImGuiHooks::ShowWarningOverlay( "Setting VSync (GL SwapInterval) failed, maybe try another mode" );
 			}
+#endif
 		} else {
 			AddTooltip( "r_swapInterval" );
 		}
@@ -1665,6 +1667,7 @@ static CVarOption videoOptionsImmediately[] = {
 	} ),
 	CVarOption( "r_screenshotPngCompression", "Compression level for PNG screenshots", OT_INT, 0, 9 ),
 	CVarOption( "r_screenshotJpgQuality", "Quality level for JPG screenshots", OT_INT, 1, 100 ),
+#if 0
 	CVarOption( "r_useSoftParticles", []( idCVar& cvar ) {
 		bool enable = cvar.GetBool();
 		if ( ImGui::Checkbox( "Use Soft Particles", &enable ) ) {
@@ -1677,8 +1680,9 @@ static CVarOption videoOptionsImmediately[] = {
 		const char* descr = "! Can slow down rendering !\nSoften particle transitions when player walks through them or they cross solid geometry. Needs r_enableDepthCapture.";
 		AddCVarOptionTooltips( cvar, descr );
 	} ),
-
+#endif
 	CVarOption( "Advanced Options" ),
+#if 0
 	CVarOption( "r_enableDepthCapture", []( idCVar& cvar ) {
 			int sel = idMath::ClampInt( -1, 1, cvar.GetInteger() ) + 1; // +1 for -1..1 to 0..2
 			if ( ImGui::Combo( "Capture Depth Buffer to Texture", &sel, "Auto (enable if needed for Soft Particles)\0Disabled\0Always Enabled\0" ) ) {
@@ -1691,6 +1695,7 @@ static CVarOption videoOptionsImmediately[] = {
 			}
 			AddCVarOptionTooltips( cvar );
 		}),
+#endif
 	CVarOption( "r_skipNewAmbient", "Disable High Quality Special Effects", OT_BOOL ),
 	CVarOption( "r_shadows", "Enable Shadows", OT_BOOL ),
 	CVarOption( "r_skipSpecular", "Disable Specular", OT_BOOL ),
@@ -1979,10 +1984,11 @@ static void DrawVideoOptionsMenu()
 		ImGui::Text( "OpenGL renderer: %s", glConfig.renderer_string );
 		ImGui::Text( "OpenGL version: %s", glConfig.version_string );
 
+#if 0
 		if ( glConfig.glDebugOutputAvailable && glConfig.haveDebugContext ) {
 			ImGui::Text( "    using an OpenGL debug context to show warnings from the OpenGL driver" );
 		}
-
+#endif
 		ImGui::EndDisabled();
 		ImGui::TreePop();
 	} else {
@@ -2205,6 +2211,7 @@ static void DrawAudioOptionsMenu()
 			ImGui::TextUnformatted( "(Output-Limiter extension ALC_SOFT_output_limiter not available)" );
 		}
 
+#if 0
 		if ( idSoundSystemLocal::alHRTFavailable ) {
 			ALCint hrtfEnabled = 0;
 			alcGetIntegerv( alDevice, ALC_HRTF_SOFT, 1, &hrtfEnabled );
@@ -2234,7 +2241,7 @@ static void DrawAudioOptionsMenu()
 			}
 			ImGui::Unindent();
 		}
-
+#endif
 		ImGui::EndDisabled();
 		ImGui::TreePop();
 	} else {

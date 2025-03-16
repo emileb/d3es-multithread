@@ -9,6 +9,7 @@ LOCAL_MODULE := doom3
 LOCAL_C_INCLUDES :=  \
 $(TOP_DIR) \
 $(TOP_DIR)/Doom/d3es/neo/mobile \
+$(TOP_DIR)/Doom/d3es_2025/neo/libs/imgui \
 $(SDL_INCLUDE_PATHS) \
 $(TOP_DIR)/AudioLibs_OpenTouch/openal/include/ \
 $(TOP_DIR)/AudioLibs_OpenTouch/liboggvorbis/include \
@@ -17,7 +18,7 @@ $(TOP_DIR)/Clibs_OpenTouch \
 $(TOP_DIR)/Clibs_OpenTouch/idtech1 \
 
 
-LOCAL_CPPFLAGS := -DUSE_GLES2 -DAIM_ASSIST -DD3_OSTYPE=\"ANDROID\" -DD3_ARCH=\"ARM\" -DD3_IS_BIG_ENDIAN=0 -DIMGUI_DISABLE
+LOCAL_CPPFLAGS := -DUSE_GLES2 -DAIM_ASSIST -DD3_OSTYPE=\"ANDROID\" -DD3_ARCH=\"ARM\" -DD3_IS_BIG_ENDIAN=0 -DIMGUI_IMPL_OPENGL_ES2 -DIMGUI_DISABLE
 
 ifeq ($(TARGET_ARCH_ABI),arm64-v8a)
     LOCAL_CPPFLAGS += -DD3_SIZEOFPTR=8
@@ -306,6 +307,22 @@ src_renderer_glsl = \
     renderer/glsl/zfillShaderVP.cpp \
 
 
+
+src_imgui = \
+        libs/imgui/backends/imgui_impl_sdl2.cpp \
+        libs/imgui/backends/imgui_impl_opengl3.cpp \
+        libs/imgui/imgui.h \
+        libs/imgui/imgui.cpp \
+        libs/imgui/imgui_draw.cpp \
+        libs/imgui/imgui_tables.cpp \
+        libs/imgui/imgui_widgets.cpp \
+        libs/imgui/imgui_demo.cpp \
+        sys/sys_imgui.h \
+        sys/sys_imgui.cpp \
+        sys/imgui_savestyle.cpp \
+
+
+
 src_core = \
     	${src_renderer} \
     	$(src_framework) \
@@ -316,6 +333,9 @@ src_core = \
         ${src_tools} \
         $(src_idlib) \
         $(src_renderer_glsl) \
+
+
+        #${src_imgui}
 
 
 LOCAL_SRC_FILES = $(SRC_ANDROID) \

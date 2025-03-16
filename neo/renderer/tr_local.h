@@ -1069,6 +1069,7 @@ typedef struct {
 	bool		stereo;
 	int			displayHz;
 	int			multiSamples;
+    bool        fullScreenDesktop;
 } glimpParms_t;
 
 bool		GLimp_Init( glimpParms_t parms );
@@ -1116,6 +1117,7 @@ const int GRAB_RELATIVEMOUSE = (1 << 2);
 
 void GLimp_GrabInput(int flags);
 void GLimp_WindowActive(bool active);
+glimpParms_t GLimp_GetCurState();
 /*
 ====================================================================
 

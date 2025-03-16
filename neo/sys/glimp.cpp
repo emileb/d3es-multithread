@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "renderer/tr_local.h"
 
+#include "sys/sys_imgui.h"
+
 #if defined(_WIN32) && defined(ID_ALLOW_TOOLS)
 #include "sys/win32/win_local.h"
 #include <SDL_syswm.h>
@@ -209,6 +211,10 @@ bool GLimp_Init(glimpParms_t parms) {
 		common->Printf("Rendering in to framebuffer [%d,%d]\n", glConfig.vidWidth, glConfig.vidHeight);
 	}
 
+    // Copy to these used in the reset of the engine, 2025
+    glConfig.winWidth = glConfig.vidWidth;
+    glConfig.winHeight = glConfig.vidHeight;
+
     //common->Printf("Using %d color bits, %d depth, %d stencil display\n",
     //				channelcolorbits, tdepthbits, tstencilbits);
 
@@ -225,6 +231,8 @@ bool GLimp_Init(glimpParms_t parms) {
     }
 
     GLimp_WindowActive(true);
+
+    D3::ImGuiHooks::Init(window, context);
 
     return true;
 }
@@ -415,4 +423,21 @@ void GLimp_GrabInput(int flags) {
     // so only grab if we want relative mode
     SDL_WM_GrabInput((flags & GRAB_RELATIVEMOUSE) ? SDL_GRAB_ON : SDL_GRAB_OFF);
 #endif
+}
+// sets a glimpParms_t based on the current true state (according to SDL)
+// Note: here, ret.fullScreenDesktop is only true if currently in fullscreen desktop mode
+//       (and ret.fullScreen is true as well)
+glimpParms_t GLimp_GetCurState()
+{
+    glimpParms_t ret = {};
+
+    ret.width = glConfig.vidWidth;
+    ret.height = glConfig.vidHeight;
+    ret.fullScreen = true;
+    ret.stereo = false;
+    ret.displayHz = 60;
+    ret.multiSamples = 0;
+    ret.fullScreenDesktop = true;
+
+    return ret;
 }

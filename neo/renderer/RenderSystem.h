@@ -67,6 +67,8 @@ typedef struct glconfig_s {
 
 	int					vidWidth, vidHeight;	// passed to R_BeginFrame
 
+    float			    winWidth, winHeight;	// passed to R_BeginFrame
+
 	int					vidWidthReal, vidHeightReal; // The real resolution of the screen, uses framebuffer if not the same as vidWidth
 
 	int					displayFrequency;

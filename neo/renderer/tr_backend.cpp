@@ -26,6 +26,7 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 #include "sys/platform.h"
+#include "sys/sys_imgui.h"
 
 #include "renderer/tr_local.h"
 
@@ -340,6 +341,8 @@ const void	RB_SwapBuffers( const void *data ) {
 	if ( r_finish.GetBool() ) {
 		qglFinish();
 	}
+
+    D3::ImGuiHooks::EndFrame();
 
 	R_FrameBufferEnd();
 
