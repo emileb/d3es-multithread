@@ -8800,28 +8800,27 @@ idPlayer::AddAIKill
 */
 void idPlayer::AddAIKill( void ) {
 
-#ifndef _D3XP
+    if( gameMod == GAME_TYPE_DOOM3_LE ) {
+        int max_souls;
+        int ammo_souls;
 
-	int max_souls;
-	int ammo_souls;
+        if ((weapon_soulcube < 0) || (inventory.weapons & (1 << weapon_soulcube)) == 0) {
+            return;
+        }
 
-	if ( ( weapon_soulcube < 0 ) || ( inventory.weapons & ( 1 << weapon_soulcube ) ) == 0 ) {
-		return;
-	}
-
-	assert( hud );
+        assert(hud);
 
 
-	ammo_souls = idWeapon::GetAmmoNumForName( "ammo_souls" );
-	max_souls = inventory.MaxAmmoForAmmoClass( this, "ammo_souls" );
-	if ( inventory.ammo[ ammo_souls ] < max_souls ) {
-		inventory.ammo[ ammo_souls ]++;
-		if ( inventory.ammo[ ammo_souls ] >= max_souls ) {
-			hud->HandleNamedEvent( "soulCubeReady" );
-			StartSound( "snd_soulcube_ready", SND_CHANNEL_ANY, 0, false, NULL );
-		}
-	}
-#endif
+        ammo_souls = idWeapon::GetAmmoNumForName("ammo_souls");
+        max_souls = inventory.MaxAmmoForAmmoClass(this, "ammo_souls");
+        if (inventory.ammo[ammo_souls] < max_souls) {
+            inventory.ammo[ammo_souls]++;
+            if (inventory.ammo[ammo_souls] >= max_souls) {
+                hud->HandleNamedEvent("soulCubeReady");
+                StartSound("snd_soulcube_ready", SND_CHANNEL_ANY, 0, false, NULL);
+            }
+        }
+    }
 }
 
 /*
