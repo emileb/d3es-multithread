@@ -520,7 +520,10 @@ int PortableShowKeyboard(void)
 	return 0;
 }
 
-
+bool PortableSetAlwaysRun(bool run)
+{
+    return false;
+}
 
 int Android_GetButton( int key )
 {
