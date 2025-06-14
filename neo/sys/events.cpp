@@ -1811,7 +1811,7 @@ static void handleMouseGrab() {
 }
 
 #ifdef __ANDROID__
-extern "C" 	const char * Android_GetCommand();
+extern "C" char * Android_GetCommand();
 #endif
 /*
 ================
@@ -1845,10 +1845,11 @@ void Sys_GenerateEvents() {
 #endif
 
 #ifdef __ANDROID__
-	const char * cmd = Android_GetCommand();
-	if(cmd)
+    char *consoleCmd;
+	while((consoleCmd = Android_GetCommand()))
 	{
-		cmdSystem->BufferCommandText( CMD_EXEC_NOW, cmd );
+		cmdSystem->BufferCommandText( CMD_EXEC_NOW, consoleCmd );
+		free(consoleCmd);
 	}
 #endif
 

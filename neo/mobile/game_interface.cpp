@@ -15,6 +15,7 @@ extern "C"
 #include "SDL_beloko_extra.h"
 
 #include "SmartToggle.h"
+#include "CStringFifo.h"
 
 #define ACTION_DOWN 0
 #define ACTION_UP 1
@@ -36,6 +37,7 @@ static bool inMenu = false;
 static bool inGameGuiActive = false;
 static bool inCinematic = false;
 static bool objectiveSystemActive = false;
+static CStringFIFO m_CmdFifo;
 
 extern int SDL_SendKeyboardKey(Uint8 state, SDL_Scancode scancode);
 //void Android_OnMouse( int androidButton, int action, float x, float y);
@@ -60,12 +62,12 @@ void PortableBackButton()
     PortableKeyEvent(0, SDL_SCANCODE_ESCAPE, 0);
 }
 
-static const char *cmd_to_run = NULL;
 void PortableCommand(const char * cmd)
 {
-	static char cmdBuffer[256];
-	idStr::snPrintf(cmdBuffer, 256, "%s\n", cmd);
-	cmd_to_run = cmdBuffer;
+    LOGI("PortableCommand: %s", cmd);
+    char cmdBuffer[256];
+    idStr::snPrintf(cmdBuffer, 256, "%s\n", cmd);
+    cstr_fifo_push(&m_CmdFifo, cmdBuffer);
 }
 
 // Can only set one impulse per frame, this should be fine
@@ -461,9 +463,11 @@ void PortableLookYaw(int mode, float yaw)
 
 
 
-void PortableInit(int argc,const char ** argv){
-	memset(cmdButtons,0,sizeof(cmdButtons));
+void PortableInit(int argc,const char ** argv)
+{
+    cstr_fifo_init(&m_CmdFifo);
 
+    memset(cmdButtons,0,sizeof(cmdButtons));
 	main_android(argc,(char **)argv, gameType);
 }
 
@@ -537,12 +541,9 @@ int Android_GetNextImpulse()
 	return impulse;
 }
 
-const char * Android_GetCommand()
+char * Android_GetCommand()
 {
-	// Potential race condition here to miss a command, however extremely unlikely to happen
-	const char *cmd = cmd_to_run;
-	cmd_to_run = NULL;
-	return cmd;
+	return cstr_fifo_pop(&m_CmdFifo);
 }
 
 void Android_PumpEvents(int screen)
