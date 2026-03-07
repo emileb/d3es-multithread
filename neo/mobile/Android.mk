@@ -345,7 +345,7 @@ LOCAL_SRC_FILES = $(SRC_ANDROID) \
                   renderer/framebuffer.cpp \
 
 
-LOCAL_SHARED_LIBRARIES := openal touchcontrols core_shared SDL2 libvorbis libogg saffal
+LOCAL_SHARED_LIBRARIES := openal-soft touchcontrols core_shared SDL2 libvorbis libogg saffal
 
 LOCAL_STATIC_LIBRARIES := logwritter jpeg
 
