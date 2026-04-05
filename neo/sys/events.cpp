@@ -38,6 +38,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "renderer/RenderSystem.h"
 #include "renderer/tr_local.h"
 
+#ifdef __ANDROID__
+#include "sound/snd_local.h"
+#endif
+
 #include "sys/sys_public.h"
 #include "sys/sys_imgui.h"
 
@@ -1298,14 +1302,23 @@ sysEvent_t Sys_GetEvent() {
 
 					// start playing the game sound world again (when coming from editor)
 					session->SetPlayingSoundWorld();
-
+#ifdef __ANDROID__
+					GLimp_WindowActive(true);
+					soundSystemLocal.Pause( false );
+#endif
 					break;
 				case SDL_WINDOWEVENT_FOCUS_LOST:
 					in_hasFocus = false;
+#ifdef __ANDROID__
+					GLimp_WindowActive(false);
+					soundSystemLocal.Pause( true );
+#endif
 					break;
+#ifndef __ANDROID__
 				case SDL_WINDOWEVENT_SIZE_CHANGED:
 					GLimp_UpdateWindowSize();
 					break;
+#endif
 			}
 
 			continue; // handle next event
@@ -1790,12 +1803,16 @@ static void handleMouseGrab() {
 		flags |= GRAB_GRABMOUSE;
 	if ( relativeMouse )
 		flags |= GRAB_RELATIVEMOUSE;
+#ifndef __ANDROID__
 	if ( enableTextInput )
 		flags |= GRAB_ENABLETEXTINPUT;
-
+#endif
 	GLimp_GrabInput( flags );
 }
 
+#ifdef __ANDROID__
+extern "C" char * Android_GetCommand();
+#endif
 /*
 ================
 Sys_GenerateEvents
@@ -1825,6 +1842,15 @@ void Sys_GenerateEvents() {
 		common->Printf( "Note: SDL1.2 doesn't support in_grabKeyboard (it's always grabbed if mouse is grabbed)\n" );
 #endif
 		in_grabKeyboard.ClearModified();
+	}
+#endif
+
+#ifdef __ANDROID__
+    char *consoleCmd;
+	while((consoleCmd = Android_GetCommand()))
+	{
+		cmdSystem->BufferCommandText( CMD_EXEC_NOW, consoleCmd );
+		free(consoleCmd);
 	}
 #endif
 

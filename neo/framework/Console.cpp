@@ -193,7 +193,7 @@ void SCR_DrawTextRightAlign( float &y, const char *text, ... ) {
 SCR_DrawFPS
 ==================
 */
-#define	FPS_FRAMES	64
+#define	FPS_FRAMES	8
 float SCR_DrawFPS( float y ) {
 	static float previousTimes[FPS_FRAMES];
 	static int	index;

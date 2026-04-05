@@ -32,28 +32,8 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef __QGL_H__
 #define __QGL_H__
 
-#if defined( ID_DEDICATED ) && defined( _WIN32 )
-// to allow stubbing gl on windows, define WINGDIAPI to nothing - it would otherwise be
-// extended to __declspec(dllimport) on MSVC (our stub is no dll.)
-	#ifdef WINGDIAPI
-		#pragma push_macro("WINGDIAPI")
-		#undef WINGDIAPI
-		#define WINGDIAPI
-	#endif
-#endif
-
-#ifdef D3_SDL3
-  #include <SDL3/SDL_opengl.h>
-#else // SDL1.2 or SDL2
-  #include <SDL_opengl.h>
-#endif
-
-#if defined( ID_DEDICATED ) && defined( _WIN32 )
-// restore WINGDIAPI
-	#ifdef WINGDIAPI
-		#pragma pop_macro("WINGDIAPI")
-	#endif
-#endif
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 
 typedef void (*GLExtension_t)(void);
 
@@ -68,100 +48,7 @@ GLExtension_t GLimp_ExtensionPointer( const char *name );
 #endif
 
 // declare qgl functions
-#define QGLPROC(name, rettype, args) extern rettype (APIENTRYP q##name) args;
+#define QGLPROC(name, rettype, args) extern rettype (GL_APIENTRYP q##name) args;
 #include "renderer/qgl_proc.h"
-
-// multitexture
-extern	void ( APIENTRY * qglMultiTexCoord2fARB )( GLenum texture, GLfloat s, GLfloat t );
-extern	void ( APIENTRY * qglMultiTexCoord2fvARB )( GLenum texture, GLfloat *st );
-extern	void ( APIENTRY * qglActiveTextureARB )( GLenum texture );
-extern	void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
-
-// ARB_vertex_buffer_object
-extern PFNGLBINDBUFFERARBPROC qglBindBufferARB;
-extern PFNGLDELETEBUFFERSARBPROC qglDeleteBuffersARB;
-extern PFNGLGENBUFFERSARBPROC qglGenBuffersARB;
-extern PFNGLISBUFFERARBPROC qglIsBufferARB;
-extern PFNGLBUFFERDATAARBPROC qglBufferDataARB;
-extern PFNGLBUFFERSUBDATAARBPROC qglBufferSubDataARB;
-extern PFNGLGETBUFFERSUBDATAARBPROC qglGetBufferSubDataARB;
-extern PFNGLMAPBUFFERARBPROC qglMapBufferARB;
-extern PFNGLUNMAPBUFFERARBPROC qglUnmapBufferARB;
-extern PFNGLGETBUFFERPARAMETERIVARBPROC qglGetBufferParameterivARB;
-extern PFNGLGETBUFFERPOINTERVARBPROC qglGetBufferPointervARB;
-
-// 3D textures
-extern void ( APIENTRY *qglTexImage3D)(GLenum, GLint, GLint, GLsizei, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid *);
-
-// shared texture palette
-extern	void ( APIENTRY *qglColorTableEXT)( int, int, int, int, int, const void * );
-
-// EXT_stencil_two_side
-extern	PFNGLACTIVESTENCILFACEEXTPROC	qglActiveStencilFaceEXT;
-
-// DG: couldn't find any extension for this, it's supported in GL2.0 and newer, incl OpenGL ES2.0
-// SE: work around missing function definition on legacy Mac OS X versions
-#if defined(OSX_TIGER) || defined(OSX_LEOPARD)
-typedef void (APIENTRYP PFNGLSTENCILOPSEPARATEPROC) (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass);
-#endif
-extern PFNGLSTENCILOPSEPARATEPROC qglStencilOpSeparate;
-
-// ARB_texture_compression
-extern	PFNGLCOMPRESSEDTEXIMAGE2DARBPROC	qglCompressedTexImage2DARB;
-extern	PFNGLGETCOMPRESSEDTEXIMAGEARBPROC	qglGetCompressedTexImageARB;
-
-// ARB_texture_compression_bptc - uses ARB_texture_compression, just adds new constants
-// that might be missing in old OpenGL headers
-#ifndef GL_COMPRESSED_RGBA_BPTC_UNORM_ARB
-  // currently the only one we use, there's also COMPRESSED_SRGB_ALPHA_BPTC_UNORM_ARB (0x8E8D)
-  // and COMPRESSED_RGB_BPTC_SIGNED_FLOAT_ARB (0x8E8E) and COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_ARB (0x8E8F)
-  #define GL_COMPRESSED_RGBA_BPTC_UNORM_ARB 0x8E8C
-#endif
-
-// ARB_vertex_program / ARB_fragment_program
-extern PFNGLVERTEXATTRIBPOINTERARBPROC		qglVertexAttribPointerARB;
-extern PFNGLENABLEVERTEXATTRIBARRAYARBPROC	qglEnableVertexAttribArrayARB;
-extern PFNGLDISABLEVERTEXATTRIBARRAYARBPROC	qglDisableVertexAttribArrayARB;
-extern PFNGLPROGRAMSTRINGARBPROC			qglProgramStringARB;
-extern PFNGLBINDPROGRAMARBPROC				qglBindProgramARB;
-extern PFNGLGENPROGRAMSARBPROC				qglGenProgramsARB;
-extern PFNGLPROGRAMENVPARAMETER4FVARBPROC	qglProgramEnvParameter4fvARB;
-extern PFNGLPROGRAMLOCALPARAMETER4FVARBPROC	qglProgramLocalParameter4fvARB;
-
-// GL_EXT_depth_bounds_test
-extern PFNGLDEPTHBOUNDSEXTPROC              qglDepthBoundsEXT;
-
-// GL_ARB_debug_output
-extern PFNGLDEBUGMESSAGECALLBACKARBPROC    qglDebugMessageCallbackARB;
-
-#if defined( _WIN32 ) && defined(ID_ALLOW_TOOLS)
-
-extern  BOOL(WINAPI * qwglSwapBuffers)(HDC);
-extern int Win_ChoosePixelFormat(HDC hdc);
-
-extern BOOL(WINAPI * qwglCopyContext)(HGLRC, HGLRC, UINT);
-extern HGLRC(WINAPI * qwglCreateContext)(HDC);
-extern HGLRC(WINAPI * qwglCreateLayerContext)(HDC, int);
-extern BOOL(WINAPI * qwglDeleteContext)(HGLRC);
-extern HGLRC(WINAPI * qwglGetCurrentContext)(VOID);
-extern HDC(WINAPI * qwglGetCurrentDC)(VOID);
-extern PROC(WINAPI * qwglGetProcAddress)(LPCSTR);
-extern BOOL(WINAPI * qwglMakeCurrent)(HDC, HGLRC);
-extern BOOL(WINAPI * qwglShareLists)(HGLRC, HGLRC);
-extern BOOL(WINAPI * qwglUseFontBitmaps)(HDC, DWORD, DWORD, DWORD);
-
-extern BOOL(WINAPI * qwglUseFontOutlines)(HDC, DWORD, DWORD, DWORD, FLOAT,
-	FLOAT, int, LPGLYPHMETRICSFLOAT);
-
-extern BOOL(WINAPI * qwglDescribeLayerPlane)(HDC, int, int, UINT,
-	LPLAYERPLANEDESCRIPTOR);
-extern int  (WINAPI * qwglSetLayerPaletteEntries)(HDC, int, int, int,
-	CONST COLORREF *);
-extern int  (WINAPI * qwglGetLayerPaletteEntries)(HDC, int, int, int,
-	COLORREF *);
-extern BOOL(WINAPI * qwglRealizeLayerPalette)(HDC, int, BOOL);
-extern BOOL(WINAPI * qwglSwapLayerBuffers)(HDC, UINT);
-
-#endif	// _WIN32 && ID_ALLOW_TOOLS
 
 #endif

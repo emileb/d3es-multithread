@@ -290,4 +290,22 @@ typedef int						qhandle_t;
 #define MIN_WORLD_COORD			( -128 * 1024 )
 #define MAX_WORLD_SIZE			( MAX_WORLD_COORD - MIN_WORLD_COORD )
 
+
+#ifdef __ANDROID__
+extern "C"
+{
+  	#define GAME_TYPE_DOOM3  16
+    #define GAME_TYPE_DOOM3_ROE  17
+	#define GAME_TYPE_DOOM3_CDOOM 18
+	#define GAME_TYPE_DOOM3_LE 19
+	#define GAME_TYPE_DOOM3_RIVENSIN 20
+	#define GAME_TYPE_DOOM3_EOC 21
+	#define GAME_TYPE_DOOM3_PERFECTED 22
+	#define GAME_TYPE_DOOM3_PHOBOS 23
+
+	extern int gameMod; // This is used in the game
+	extern char const * nativeLibsPath;
+}
+#endif
+
 #endif

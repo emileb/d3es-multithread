@@ -81,7 +81,7 @@ public:
 	virtual						~idGame() {}
 
 	// Initialize the game for the first time.
-	virtual void				Init( void ) = 0;
+	virtual void				Init( int gameMod ) = 0;
 
 	// Shut down the entire game.
 	virtual void				Shutdown( void ) = 0;
@@ -197,6 +197,22 @@ public:
 	virtual bool				DownloadRequest( const char *IP, const char *guid, const char *paks, char urls[ MAX_STRING_CHARS ] ) = 0;
 
 	virtual void				GetMapLoadingGUI( char gui[ MAX_STRING_CHARS ] ) = 0;
+
+#ifdef __ANDROID__
+	enum ExtraData
+	{
+		GET_GUI_ACTIVE,
+		GET_IN_CINEMATIC,
+		GET_OBJECTIVE_ACTIVE,
+	};
+	virtual int					GetExtraData( ExtraData cmd ) = 0;
+#endif
+
+#ifdef AIM_ASSIST
+	// compute an angle offset to be applied to the given client's aim
+	virtual void				GetAimAssistAngles( idAngles & angles ) = 0;
+	virtual float				GetAimAssistSensitivity() = 0;
+#endif
 };
 
 extern idGame *					game;

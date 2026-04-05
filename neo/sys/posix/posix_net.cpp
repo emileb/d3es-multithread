@@ -272,16 +272,20 @@ NET_InitNetworking
 */
 void Sys_InitNetworking(void)
 {
+#ifdef __ANDROID__ // FIX ME!!!
+return;
+#endif
 	unsigned int ip, mask;
 	struct ifaddrs *ifap, *ifp;
 
 	num_interfaces = 0;
 
+#ifndef __ANDROID__
 	if( getifaddrs( &ifap ) < 0 ) {
 		common->FatalError( "InitNetworking: SIOCGIFCONF error - %s\n", strerror( errno ) );
 		return;
 	}
-
+#endif
 	for( ifp = ifap; ifp; ifp = ifp->ifa_next ) {
 		if ( !ifp->ifa_addr )
 			continue;
@@ -317,7 +321,9 @@ void Sys_InitNetworking(void)
 		if (num_interfaces >= MAX_INTERFACES)
 			break;
 	}
+#ifndef __ANDROID__
 	freeifaddrs(ifap);
+#endif
 }
 
 /*

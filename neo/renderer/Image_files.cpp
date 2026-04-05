@@ -27,6 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 */
 
 // DG: replace libjpeg with stb_image.h because it causes fewer headaches
+// include this first, otherwise build breaks because of  use_idStr_* #defines in Str.h
+#define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
 #define STBI_ONLY_JPEG // at least for now, only use it for JPEG
@@ -902,18 +904,12 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 			if ( globalImages->image_roundDown.GetBool() && scaled_height > h ) {
 				scaled_height >>= 1;
 			}
-			int outWidth = scaled_width;
-			int outHeight = scaled_height;
-			resampledBuffer = R_ResampleTexture( *pic, w, h, outWidth, outHeight );
-			if ( outWidth != scaled_width || outHeight != scaled_height ) {
-				common->Warning( "Texture '%s' didn't have power-of-two size *and* was too big, scaled from %dx%d to %dx%d",
-				                 name.c_str(), w, h, outWidth, outHeight );
-			}
 
+			resampledBuffer = R_ResampleTexture( *pic, w, h, scaled_width, scaled_height );
 			R_StaticFree( *pic );
 			*pic = resampledBuffer;
-			*width = outWidth;
-			*height = outHeight;
+			*width = scaled_width;
+			*height = scaled_height;
 		}
 	}
 }

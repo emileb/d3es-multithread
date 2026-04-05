@@ -235,16 +235,15 @@ void idMD5Mesh::ParseMesh( idLexer &parser, int numJoints, const idJointMat *joi
 	// build the information that will be common to all animations of this mesh:
 	// silhouette edge connectivity and normal / tangent generation information
 	//
-	bool onStack;
-	idDrawVert *verts = (idDrawVert*)Mem_MallocA( texCoords.Num()*sizeof(idDrawVert), onStack );
-
+	idDrawVert *verts = (idDrawVert *) Mem_Alloc16( texCoords.Num() * sizeof( idDrawVert ) );
 	for ( i = 0; i < texCoords.Num(); i++ ) {
 		verts[i].Clear();
 		verts[i].st = texCoords[i];
 	}
 	TransformVerts( verts, joints );
 	deformInfo = R_BuildDeformInfo( texCoords.Num(), verts, tris.Num(), tris.Ptr(), shader->UseUnsmoothedTangents() );
-	Mem_FreeA( verts, onStack );
+
+    Mem_Free16(verts);
 }
 
 /*
@@ -365,15 +364,13 @@ idMD5Mesh::CalcBounds
 */
 idBounds idMD5Mesh::CalcBounds( const idJointMat *entJoints ) {
 	idBounds	bounds;
-	bool onStack;
-	idDrawVert *verts = (idDrawVert*)Mem_MallocA( texCoords.Num()*sizeof(idDrawVert), onStack );
+	idDrawVert *verts = (idDrawVert *) Mem_Alloc16( texCoords.Num() * sizeof( idDrawVert ) );
 
 	TransformVerts( verts, entJoints );
 
 	SIMDProcessor->MinMax( bounds[0], bounds[1], verts, texCoords.Num() );
 
-	Mem_FreeA( verts, onStack );
-
+    Mem_Free16( verts );
 	return bounds;
 }
 
@@ -544,7 +541,7 @@ void idRenderModelMD5::LoadModel() {
 	joints.SetNum( num );
 	defaultPose.SetGranularity( 1 );
 	defaultPose.SetNum( num );
-	poseMat3 = ( idJointMat * )_alloca16( num * sizeof( *poseMat3 ) );
+	poseMat3 = ( idJointMat * )Mem_Alloc16( num * sizeof( *poseMat3 ) );
 
 	// parse num meshes
 	parser.ExpectTokenString( "numMeshes" );
@@ -583,6 +580,8 @@ void idRenderModelMD5::LoadModel() {
 	// calculate the bounds of the model
 	//
 	CalculateBounds( poseMat3 );
+
+	Mem_Free16( poseMat3 );
 
 	// set the timestamp for reloadmodels
 	fileSystem->ReadFile( name, NULL, &timeStamp );

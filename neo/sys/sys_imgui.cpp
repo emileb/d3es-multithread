@@ -17,7 +17,7 @@
 
 #include "sys_imgui.h"
 
-#include "../libs/imgui/backends/imgui_impl_opengl2.h"
+#include "../libs/imgui/backends/imgui_impl_opengl3.h"
 
 #if SDL_VERSION_ATLEAST(3, 0, 0)
   #include "../libs/imgui/backends/imgui_impl_sdl3.h"
@@ -173,7 +173,8 @@ void ShowWarningOverlay( const char* text )
 
 static float GetDefaultScale()
 {
-	if ( glConfig.winWidth != glConfig.vidWidth ) {
+	//if ( glConfig.winWidth != glConfig.vidWidth )
+    {
 		// in HighDPI mode, the font sizes are already scaled (to window coordinates), apparently
 		return 1.0f;
 	}
@@ -262,7 +263,7 @@ bool Init(void* _sdlWindow, void* sdlGlContext)
 		return false;
 	}
 
-	if ( ! ImGui_ImplOpenGL2_Init() ) {
+	if ( ! ImGui_ImplOpenGL3_Init() ) {
 		ImGui_ImplSDLx_Shutdown();
 		ImGui::DestroyContext( imguiCtx );
 		imguiCtx = NULL;
@@ -306,7 +307,7 @@ void Shutdown()
 		common->Printf( "Shutting down ImGui\n" );
 
 		// TODO: only if init was successful!
-		ImGui_ImplOpenGL2_Shutdown();
+		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplSDLx_Shutdown();
 		ImGui::DestroyContext( imguiCtx );
 		imgui_initialized = false;
@@ -351,7 +352,7 @@ void NewFrame()
 	}
 
 	// Start the Dear ImGui frame
-	ImGui_ImplOpenGL2_NewFrame();
+	ImGui_ImplOpenGL3_NewFrame();
 
 	if ( ShouldShowCursor() )
 		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
@@ -492,8 +493,8 @@ bool ShouldShowCursor()
 		// in a black bar (Doom3 cursor is not drawn there), show the ImGui cursor
 		if ( idUserInterface::IsUserInterfaceScaledTo43( sessLocal.GetActiveMenu() ) ) {
 			ImVec2 mousePos = ImGui::GetMousePos();
-			float w = glConfig.winWidth;
-			float h = glConfig.winHeight;
+			float w = glConfig.vidWidth;
+			float h = glConfig.vidHeight;
 			float aspectRatio = w/h;
 			static const float virtualAspectRatio = float(VIRTUAL_WIDTH)/float(VIRTUAL_HEIGHT); // 4:3 = 1.333
 			if(aspectRatio > 1.4f) {
@@ -531,6 +532,7 @@ void EndFrame()
 	haveNewFrame = false;
 	ImGui::Render();
 
+#if 0
 	// Doom3 uses the OpenGL ARB shader extensions, for most things it renders.
 	// disable those shaders, the OpenGL classic integration of ImGui doesn't use shaders
 	qglDisable( GL_VERTEX_PROGRAM_ARB );
@@ -558,13 +560,15 @@ void EndFrame()
 			qglDisable( GL_TEXTURE_CUBE_MAP_EXT );
 		}
 	}
+#endif
+    qglBindBuffer( GL_ARRAY_BUFFER, 0 );
+	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 
-	ImGui_ImplOpenGL2_RenderDrawData( ImGui::GetDrawData() );
-
+#if 0
 	if ( curArrayBuffer != 0 ) {
 		qglBindBufferARB( GL_ARRAY_BUFFER_ARB, curArrayBuffer );
 	}
-
+#endif
 	// reset this at the end of each frame, will be set again by ProcessEvent()
 	if ( hadKeyDownEvent ) {
 		hadKeyDownEvent = false;

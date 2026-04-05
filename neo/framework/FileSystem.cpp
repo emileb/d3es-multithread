@@ -1351,6 +1351,7 @@ pack_t *idFileSystemLocal::LoadZipFile( const char *zipfile ) {
 		unzGoToNextFile(uf);
 	}
 
+#ifndef __ANDROID__ // The mod 'In Hell' pk4 file has binary.conf which stop it being loaded, so remove this check...is it really needed?
 	// ignore all binary paks
 	confHash = HashFileName(BINARY_CONFIG);
 	for (pakFile = pack->hashTable[confHash]; pakFile; pakFile = pakFile->next) {
@@ -1362,6 +1363,7 @@ pack_t *idFileSystemLocal::LoadZipFile( const char *zipfile ) {
 			return NULL;
 		}
 	}
+#endif
 
 	// check if this is an addon pak
 	pack->addon = false;
@@ -2771,7 +2773,9 @@ void idFileSystemLocal::Shutdown( bool reloading ) {
 			next = sp->next;
 
 			if ( sp->pack ) {
+#ifndef __ANDROID__ // Causes crash. Process killed anyway so will be closed
 				unzClose( sp->pack->handle );
+#endif
 				delete [] sp->pack->buildBuffer;
 				if ( sp->pack->addon_info ) {
 					sp->pack->addon_info->mapDecls.DeleteContents( true );

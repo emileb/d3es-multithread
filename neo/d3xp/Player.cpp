@@ -1712,6 +1712,10 @@ void idPlayer::Init( void ) {
 	MPAimFadeTime		= 0;
 	MPAimHighlight		= false;
 
+#ifdef AIM_ASSIST
+	aimAssist.Init( this );
+#endif
+
 	if ( hud ) {
 		hud->HandleNamedEvent( "aim_clear" );
 	}
@@ -1908,6 +1912,14 @@ void idPlayer::Spawn( void ) {
 	inventory.selPDA = 0;
 
 	if ( !gameLocal.isMultiplayer ) {
+
+		if( gameMod == GAME_TYPE_DOOM3_LE )
+		{
+        	int startingHealth = gameLocal.world->spawnArgs.GetInt( "startingHealth", "0");
+        	if ( (startingHealth > 0) && (health > startingHealth) ) {
+            	health = startingHealth;
+        	}
+		}
 		if ( g_skill.GetInteger() < 2 ) {
 			if ( health < 25 ) {
 				health = 25;
@@ -2503,6 +2515,10 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	savefile->ReadBool( leader );
 	savefile->ReadInt( lastSpectateChange );
 	savefile->ReadInt( lastTeleFX );
+
+#ifdef AIM_ASSIST
+	aimAssist.Init( this );
+#endif
 
 	// set the pm_ cvars
 	const idKeyValue	*kv;
@@ -7323,6 +7339,11 @@ Called every tic for each player
 void idPlayer::Think( void ) {
 	renderEntity_t *headRenderEnt;
 
+#ifdef AIM_ASSIST
+	if ( respawning == false )
+		aimAssist.Update(); // BORKEN
+#endif
+
 	UpdatePlayerIcons();
 
 	// latch button actions
@@ -8779,28 +8800,27 @@ idPlayer::AddAIKill
 */
 void idPlayer::AddAIKill( void ) {
 
-#ifndef _D3XP
+    if( gameMod == GAME_TYPE_DOOM3_LE ) {
+        int max_souls;
+        int ammo_souls;
 
-	int max_souls;
-	int ammo_souls;
+        if ((weapon_soulcube < 0) || (inventory.weapons & (1 << weapon_soulcube)) == 0) {
+            return;
+        }
 
-	if ( ( weapon_soulcube < 0 ) || ( inventory.weapons & ( 1 << weapon_soulcube ) ) == 0 ) {
-		return;
-	}
-
-	assert( hud );
+        assert(hud);
 
 
-	ammo_souls = idWeapon::GetAmmoNumForName( "ammo_souls" );
-	max_souls = inventory.MaxAmmoForAmmoClass( this, "ammo_souls" );
-	if ( inventory.ammo[ ammo_souls ] < max_souls ) {
-		inventory.ammo[ ammo_souls ]++;
-		if ( inventory.ammo[ ammo_souls ] >= max_souls ) {
-			hud->HandleNamedEvent( "soulCubeReady" );
-			StartSound( "snd_soulcube_ready", SND_CHANNEL_ANY, 0, false, NULL );
-		}
-	}
-#endif
+        ammo_souls = idWeapon::GetAmmoNumForName("ammo_souls");
+        max_souls = inventory.MaxAmmoForAmmoClass(this, "ammo_souls");
+        if (inventory.ammo[ammo_souls] < max_souls) {
+            inventory.ammo[ammo_souls]++;
+            if (inventory.ammo[ammo_souls] >= max_souls) {
+                hud->HandleNamedEvent("soulCubeReady");
+                StartSound("snd_soulcube_ready", SND_CHANNEL_ANY, 0, false, NULL);
+            }
+        }
+    }
 }
 
 /*

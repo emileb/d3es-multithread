@@ -123,7 +123,9 @@ public:
 
 	idLinkList<idEntity>	spawnNode;				// for being linked into spawnedEntities list
 	idLinkList<idEntity>	activeNode;				// for being linked into activeEntities list
-
+#ifdef AIM_ASSIST
+	idLinkList<idEntity>	aimAssistNode;			// linked into gameLocal.aimAssistEntities
+#endif
 	idLinkList<idEntity>	snapshotNode;			// for being linked into snapshotEntities list
 	int						snapshotSequence;		// last snapshot this entity was in
 	int						snapshotBits;			// number of bits this entity occupied in the last snapshot

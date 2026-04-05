@@ -208,7 +208,9 @@ public:
 	void					SetWaitState( const char *_waitstate );
 	bool					AnimDone( int channel, int blendFrames ) const;
 	virtual void			SpawnGibs( const idVec3 &dir, const char *damageDefName );
-
+#ifdef AIM_ASSIST
+	idEntity*				GetHeadEntity() { return head.GetEntity(); };
+#endif
 protected:
 	friend class			idAnimState;
 

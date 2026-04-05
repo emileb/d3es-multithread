@@ -52,6 +52,9 @@ If you have questions concerning this license or the applicable additional terms
 // SDL.h for clipboard:
 #include "sys/sys_sdl.h"
 
+#ifdef __ANDROID__
+#include "LogWritter.h"
+#endif
 
 #ifdef __APPLE__ // for clock_get_time() in Sys_MillisecondsPrecise()
 #include <mach/clock.h>
@@ -1294,6 +1297,11 @@ char *Sys_ConsoleInput( void ) {
 low level output
 ===============
 */
+#ifdef __ANDROID__
+#include <android/log.h>
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO,"Utils NDK", __VA_ARGS__))
+#endif
+
 
 void Sys_VPrintf( const char *msg, va_list arg ) {
 	// gonna use arg twice, so copy it
@@ -1317,14 +1325,28 @@ void Sys_DebugPrintf( const char *fmt, ... ) {
 
 	tty_Hide();
 	va_start( argptr, fmt );
+#ifdef __ANDROID__
+	char p[1000];
+    idStr::vsnPrintf(p, sizeof(p), fmt, argptr);
+	LOGI("D3: %s",p);
+	LogWritter_Write(p);
+#else	
 	Sys_VPrintf( fmt, argptr );
+#endif
 	va_end( argptr );
 	tty_Show();
 }
 
 void Sys_DebugVPrintf( const char *fmt, va_list arg ) {
 	tty_Hide();
+#ifdef __ANDROID__
+    char p[1000];
+    idStr::vsnPrintf(p, sizeof(p), fmt, arg);
+    LOGI("D3: %s",p);
+	LogWritter_Write(p);
+#else	
 	Sys_VPrintf( fmt, arg );
+#endif
 	tty_Show();
 }
 
@@ -1332,7 +1354,14 @@ void Sys_Printf(const char *msg, ...) {
 	va_list argptr;
 	tty_Hide();
 	va_start( argptr, msg );
+#ifdef __ANDROID__
+	char p[1000];
+    idStr::vsnPrintf(p, sizeof(p), msg, argptr);
+	LOGI("D3: %s",p);
+	LogWritter_Write(p);
+#else
 	Sys_VPrintf( msg, argptr );
+#endif
 	va_end( argptr );
 	tty_Show();
 }
