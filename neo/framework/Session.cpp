@@ -2685,7 +2685,7 @@ void idSessionLocal::Frame() {
 			// skipped frames so write them out
 			int c = aviDemoFrameCount - aviTicStart;
 			while ( c-- ) {
-				g_screenshotFormat = 0;
+				//g_screenshotFormat = 0;
 				renderSystem->TakeScreenshot( com_aviDemoWidth.GetInteger(), com_aviDemoHeight.GetInteger(), name, com_aviDemoSamples.GetInteger(), NULL );
 				name = va("demos/%s/%s_%05i.tga", aviDemoShortName.c_str(), aviDemoShortName.c_str(), ++aviTicStart );
 			}
@@ -2696,7 +2696,7 @@ void idSessionLocal::Frame() {
 		console->ClearNotifyLines();
 
 		// this will call Draw, possibly multiple times if com_aviDemoSamples is > 1
-		g_screenshotFormat = 0;
+		//g_screenshotFormat = 0;
 		renderSystem->TakeScreenshot( com_aviDemoWidth.GetInteger(), com_aviDemoHeight.GetInteger(), name, com_aviDemoSamples.GetInteger(), NULL );
 	}
 

@@ -237,7 +237,6 @@ void idMegaTexture::BindForViewOrigin( const idVec3 viewOrigin ) {
 			globalImages->whiteImage->Bind();
 
 			static float	parms[4] = { -2, -2, 0, 1 };	// no contribution
-			qglProgramLocalParameter4fvARB( GL_VERTEX_PROGRAM_ARB, i, parms );
 		} else {
 			idTextureLevel	*level = &levels[ numLevels-1-i ];
 
@@ -250,7 +249,6 @@ void idMegaTexture::BindForViewOrigin( const idVec3 viewOrigin ) {
 			} else {
 				level->image->Bind();
 			}
-			qglProgramLocalParameter4fvARB( GL_VERTEX_PROGRAM_ARB, i, level->parms );
 		}
 	}
 
@@ -259,13 +257,11 @@ void idMegaTexture::BindForViewOrigin( const idVec3 viewOrigin ) {
 	parms[1] = 0;
 	parms[2] = 0;
 	parms[3] = 1;
-	qglProgramLocalParameter4fvARB( GL_VERTEX_PROGRAM_ARB, 7, parms );
 
 	parms[0] = 1;
 	parms[1] = 1;
 	parms[2] = r_terrainScale.GetFloat();
 	parms[3] = 1;
-	qglProgramLocalParameter4fvARB( GL_VERTEX_PROGRAM_ARB, 8, parms );
 }
 
 /*
@@ -642,271 +638,4 @@ void	idMegaTexture::GenerateMegaPreview( const char *fileName ) {
 	R_StaticFree( pic );
 
 	delete fileHandle;
-}
-
-
-/*
-====================
-MakeMegaTexture_f
-
-Incrementally load a giant tga file and process into the mega texture block format
-====================
-*/
-void idMegaTexture::MakeMegaTexture_f( const idCmdArgs &args ) {
-	int		columns, fileSize, numBytes;
-	byte	*pixbuf;
-	int		row, column;
-	TargaHeader	targa_header;
-
-	if ( args.Argc() != 2 ) {
-		common->Printf( "USAGE: makeMegaTexture <filebase>\n" );
-		return;
-	}
-
-	idStr	name_s = "megaTextures/";
-	name_s += args.Argv(1);
-	name_s.StripFileExtension();
-	name_s += ".tga";
-
-	const char	*name = name_s.c_str();
-
-	//
-	// open the file
-	//
-	common->Printf( "Opening %s.\n", name );
-	fileSize = fileSystem->ReadFile( name, NULL, NULL );
-	idFile	*file = fileSystem->OpenFileRead( name );
-
-	if ( !file ) {
-		common->Printf( "Couldn't open %s\n", name );
-		return;
-	}
-
-	targa_header.id_length = ReadByte( file );
-	targa_header.colormap_type = ReadByte( file );
-	targa_header.image_type = ReadByte( file );
-
-	targa_header.colormap_index = ReadShort( file );
-	targa_header.colormap_length = ReadShort( file );
-	targa_header.colormap_size = ReadByte( file );
-	targa_header.x_origin = ReadShort( file );
-	targa_header.y_origin = ReadShort( file );
-	targa_header.width = ReadShort( file );
-	targa_header.height = ReadShort( file );
-	targa_header.pixel_size = ReadByte( file );
-	targa_header.attributes = ReadByte( file );
-
-	if ( targa_header.image_type != 2 && targa_header.image_type != 10 && targa_header.image_type != 3 ) {
-		common->Error( "LoadTGA( %s ): Only type 2 (RGB), 3 (gray), and 10 (RGB) TGA images supported\n", name );
-	}
-
-	if ( targa_header.colormap_type != 0 ) {
-		common->Error( "LoadTGA( %s ): colormaps not supported\n", name );
-	}
-
-	if ( ( targa_header.pixel_size != 32 && targa_header.pixel_size != 24 ) && targa_header.image_type != 3 ) {
-		common->Error( "LoadTGA( %s ): Only 32 or 24 bit images supported (no colormaps)\n", name );
-	}
-
-	if ( targa_header.image_type == 2 || targa_header.image_type == 3 ) {
-		numBytes = targa_header.width * targa_header.height * ( targa_header.pixel_size >> 3 );
-		if ( numBytes > fileSize - 18 - targa_header.id_length ) {
-			common->Error( "LoadTGA( %s ): incomplete file\n", name );
-		}
-	}
-
-	columns = targa_header.width;
-
-	// skip TARGA image comment
-	if ( targa_header.id_length != 0 ) {
-		file->Seek( targa_header.id_length, FS_SEEK_CUR );
-	}
-
-	megaTextureHeader_t		mtHeader;
-
-	mtHeader.tileSize = TILE_SIZE;
-	mtHeader.tilesWide = RoundDownToPowerOfTwo( targa_header.width ) / TILE_SIZE;
-	mtHeader.tilesHigh = RoundDownToPowerOfTwo( targa_header.height ) / TILE_SIZE;
-
-	idStr	outName = name;
-	outName.StripFileExtension();
-	outName += ".mega";
-
-	common->Printf( "Writing %i x %i size %i tiles to %s.\n",
-		mtHeader.tilesWide, mtHeader.tilesHigh, mtHeader.tileSize, outName.c_str() );
-
-	// open the output megatexture file
-	idFile	*out = fileSystem->OpenFileWrite( outName.c_str() );
-
-	out->Write( &mtHeader, sizeof( mtHeader ) );
-	out->Seek( TILE_SIZE * TILE_SIZE * 4, FS_SEEK_SET );
-
-	// we will process this one row of tiles at a time, since the entire thing
-	// won't fit in memory
-	byte	*targa_rgba = (byte *)R_StaticAlloc( TILE_SIZE * targa_header.width * 4 );
-
-	int blockRowsRemaining = mtHeader.tilesHigh;
-	while ( blockRowsRemaining-- ) {
-		common->Printf( "%i blockRowsRemaining\n", blockRowsRemaining );
-		session->UpdateScreen();
-
-		if ( targa_header.image_type == 2 || targa_header.image_type == 3 )	{
-			// Uncompressed RGB or gray scale image
-			for( row = 0 ; row < TILE_SIZE ; row++ ) {
-				pixbuf = targa_rgba + row*columns*4;
-				for( column = 0; column < columns; column++) {
-					unsigned char red,green,blue,alphabyte;
-					switch( targa_header.pixel_size ) {
-					case 8:
-						blue = ReadByte( file );
-						green = blue;
-						red = blue;
-						*pixbuf++ = red;
-						*pixbuf++ = green;
-						*pixbuf++ = blue;
-						*pixbuf++ = 255;
-						break;
-
-					case 24:
-						blue = ReadByte( file );
-						green = ReadByte( file );
-						red = ReadByte( file );
-						*pixbuf++ = red;
-						*pixbuf++ = green;
-						*pixbuf++ = blue;
-						*pixbuf++ = 255;
-						break;
-					case 32:
-						blue = ReadByte( file );
-						green = ReadByte( file );
-						red = ReadByte( file );
-						alphabyte = ReadByte( file );
-						*pixbuf++ = red;
-						*pixbuf++ = green;
-						*pixbuf++ = blue;
-						*pixbuf++ = alphabyte;
-						break;
-					default:
-						common->Error( "LoadTGA( %s ): illegal pixel_size '%d'\n", name, targa_header.pixel_size );
-						break;
-					}
-				}
-			}
-		} else if ( targa_header.image_type == 10 ) {   // Runlength encoded RGB images
-			unsigned char red,green,blue,alphabyte,packetHeader,packetSize,j;
-
-			red = 0;
-			green = 0;
-			blue = 0;
-			alphabyte = 0xff;
-
-			for( row = 0 ; row < TILE_SIZE ; row++ ) {
-				pixbuf = targa_rgba + row*columns*4;
-				for( column = 0; column < columns; ) {
-					packetHeader= ReadByte( file );
-					packetSize = 1 + (packetHeader & 0x7f);
-					if ( packetHeader & 0x80 ) {        // run-length packet
-						switch( targa_header.pixel_size ) {
-							case 24:
-									blue = ReadByte( file );
-									green = ReadByte( file );
-									red = ReadByte( file );
-									alphabyte = 255;
-									break;
-							case 32:
-									blue = ReadByte( file );
-									green = ReadByte( file );
-									red = ReadByte( file );
-									alphabyte = ReadByte( file );
-									break;
-							default:
-								common->Error( "LoadTGA( %s ): illegal pixel_size '%d'\n", name, targa_header.pixel_size );
-								break;
-						}
-
-						for( j = 0; j < packetSize; j++ ) {
-							*pixbuf++=red;
-							*pixbuf++=green;
-							*pixbuf++=blue;
-							*pixbuf++=alphabyte;
-							column++;
-							if ( column == columns ) { // run spans across rows
-								common->Error( "TGA had RLE across columns, probably breaks block" );
-								column = 0;
-								if ( row > 0) {
-									row--;
-								}
-								else {
-									goto breakOut;
-								}
-								pixbuf = targa_rgba + row*columns*4;
-							}
-						}
-					} else {                            // non run-length packet
-						for( j = 0; j < packetSize; j++ ) {
-							switch( targa_header.pixel_size ) {
-								case 24:
-										blue = ReadByte( file );
-										green = ReadByte( file );
-										red = ReadByte( file );
-										*pixbuf++ = red;
-										*pixbuf++ = green;
-										*pixbuf++ = blue;
-										*pixbuf++ = 255;
-										break;
-								case 32:
-										blue = ReadByte( file );
-										green = ReadByte( file );
-										red = ReadByte( file );
-										alphabyte = ReadByte( file );
-										*pixbuf++ = red;
-										*pixbuf++ = green;
-										*pixbuf++ = blue;
-										*pixbuf++ = alphabyte;
-										break;
-								default:
-									common->Error( "LoadTGA( %s ): illegal pixel_size '%d'\n", name, targa_header.pixel_size );
-									break;
-							}
-							column++;
-							if ( column == columns ) { // pixel packet run spans across rows
-								column = 0;
-								if ( row > 0 ) {
-									row--;
-								}
-								else {
-									goto breakOut;
-								}
-								pixbuf = targa_rgba + row*columns*4;
-							}
-						}
-					}
-				}
-				breakOut: ;
-			}
-		}
-
-		//
-		// write out individual blocks from the full row block buffer
-		//
-		for ( int rowBlock = 0 ; rowBlock < mtHeader.tilesWide ; rowBlock++ ) {
-			for ( int y = 0 ; y < TILE_SIZE ; y++ ) {
-				out->Write( targa_rgba + ( y * targa_header.width + rowBlock * TILE_SIZE ) * 4, TILE_SIZE * 4 );
-			}
-		}
-	}
-
-	R_StaticFree( targa_rgba );
-
-	GenerateMegaMipMaps( &mtHeader, out );
-
-	delete out;
-	delete file;
-
-	GenerateMegaPreview( outName.c_str() );
-#if 0
-	if ( (targa_header.attributes & (1<<5)) ) {			// image flp bit
-		R_VerticalFlip( *pic, *width, *height );
-	}
-#endif
 }

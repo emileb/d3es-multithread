@@ -26,9 +26,6 @@ If you have questions concerning this license or the applicable additional terms
 ===========================================================================
 */
 
-#if defined(__ppc__) && defined(__APPLE__)
-#include <vecLib/vecLib.h>
-#endif
 #if defined(__GNUC__) && defined(__SSE2__)
 #include <xmmintrin.h>
 #endif
@@ -40,6 +37,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "renderer/tr_local.h"
 
 //====================================================================
+
+extern const unsigned int      NUM_FRAME_DATA = 2;
+extern frameData_t	           *smpFrameData[NUM_FRAME_DATA];
+extern volatile unsigned int   smpFrame;
 
 /*
 ======================
@@ -158,11 +159,6 @@ idScreenRect R_ScreenRectFromViewFrustumBounds( const idBounds &bounds ) {
 	screenRect.y1 = idMath::FtoiFast( 0.5f * ( 1.0f + bounds[0].z ) * ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 ) );
 	screenRect.y2 = idMath::FtoiFast( 0.5f * ( 1.0f + bounds[1].z ) * ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 ) );
 
-	if ( r_useDepthBoundsTest.GetInteger() ) {
-		R_TransformEyeZToWin( -bounds[0].x, tr.viewDef->projectionMatrix, screenRect.zmin );
-		R_TransformEyeZToWin( -bounds[1].x, tr.viewDef->projectionMatrix, screenRect.zmax );
-	}
-
 	return screenRect;
 }
 
@@ -184,6 +180,9 @@ R_ToggleSmpFrame
 ====================
 */
 void R_ToggleSmpFrame( void ) {
+	smpFrame++;
+    frameData = smpFrameData[smpFrame % NUM_FRAME_DATA];
+
 	R_FreeDeferredTriSurfs( frameData );
 
 	// clear frame-temporary data
@@ -220,20 +219,30 @@ void R_ShutdownFrameData( void ) {
 	frameData_t *frame;
 	frameMemoryBlock_t *block;
 
-	// free any current data
-	frame = frameData;
-	if ( !frame ) {
-		return;
+	for( int n = 0; n < NUM_FRAME_DATA; n++ )
+	{
+		// free any current data
+		frame = smpFrameData[n];
+		
+		if ( !frame ) 
+		{
+			continue;
+		}
+	
+		R_FreeDeferredTriSurfs( frame );
+	
+		frameMemoryBlock_t *nextBlock;
+		
+		for ( block = frame->memory ; block ; block = nextBlock )
+		{
+			nextBlock = block->next;
+			Mem_Free( block );
+		}
+		
+		Mem_Free( frame );
+		
+		smpFrameData[n] = NULL;
 	}
-
-	R_FreeDeferredTriSurfs( frame );
-
-	frameMemoryBlock_t *nextBlock;
-	for ( block = frame->memory ; block ; block = nextBlock ) {
-		nextBlock = block->next;
-		Mem_Free( block );
-	}
-	Mem_Free( frame );
 	frameData = NULL;
 }
 
@@ -249,18 +258,30 @@ void R_InitFrameData( void ) {
 
 	R_ShutdownFrameData();
 
-	frameData = (frameData_t *)Mem_ClearedAlloc( sizeof( *frameData ));
-	frame = frameData;
-	size = MEMORY_BLOCK_SIZE;
-	block = (frameMemoryBlock_t *)Mem_Alloc( size + sizeof( *block ) );
-	if ( !block ) {
-		common->FatalError( "R_InitFrameData: Mem_Alloc() failed" );
+	for( int n = 0; n < NUM_FRAME_DATA; n++ )
+	{
+		smpFrameData[n] = (frameData_t *)Mem_ClearedAlloc( sizeof( frameData_t ));
+		
+		frame = smpFrameData[n];
+		
+		size = MEMORY_BLOCK_SIZE;
+		
+		block = (frameMemoryBlock_t *)Mem_Alloc( size + sizeof( *block ) );
+		
+		if ( !block )
+		{
+			common->FatalError( "R_InitFrameData: Mem_Alloc() failed" );
+		}
+		
+		block->size = size;
+		block->used = 0;
+		block->next = NULL;
+		frame->memory = block;
+		frame->memoryHighwater = 0;
 	}
-	block->size = size;
-	block->used = 0;
-	block->next = NULL;
-	frame->memory = block;
-	frame->memoryHighwater = 0;
+
+	smpFrame = 0;
+	frameData = smpFrameData[0];
 
 	R_ToggleSmpFrame();
 }
@@ -891,7 +912,7 @@ R_SetupProjection
 This uses the "infinite far z" trick
 ===============
 */
-void R_SetupProjection( viewDef_t * viewDef ) {
+void R_SetupProjection( void ) {
 	float	xmin, xmax, ymin, ymax;
 	float	width, height;
 	float	zNear;
@@ -911,49 +932,59 @@ void R_SetupProjection( viewDef_t * viewDef ) {
 	//
 	// set up projection matrix
 	//
+#if Z_HACK
+	zNear = 8;
+#else
 	zNear	= r_znear.GetFloat();
-	if ( viewDef->renderView.cramZNear ) {
+#endif
+
+	if ( tr.viewDef->renderView.cramZNear ) {
 		zNear *= 0.25;
 	}
 
-	ymax = zNear * tan( viewDef->renderView.fov_y * idMath::PI / 360.0f );
+	ymax = zNear * tan( tr.viewDef->renderView.fov_y * idMath::PI / 360.0f );
 	ymin = -ymax;
 
-	xmax = zNear * tan( viewDef->renderView.fov_x * idMath::PI / 360.0f );
+	xmax = zNear * tan( tr.viewDef->renderView.fov_x * idMath::PI / 360.0f );
 	xmin = -xmax;
 
 	width = xmax - xmin;
 	height = ymax - ymin;
 
-	jitterx = jitterx * width / ( viewDef->viewport.x2 - viewDef->viewport.x1 + 1 );
+	jitterx = jitterx * width / ( tr.viewDef->viewport.x2 - tr.viewDef->viewport.x1 + 1 );
 	xmin += jitterx;
 	xmax += jitterx;
-	jittery = jittery * height / ( viewDef->viewport.y2 - viewDef->viewport.y1 + 1 );
+	jittery = jittery * height / ( tr.viewDef->viewport.y2 - tr.viewDef->viewport.y1 + 1 );
 	ymin += jittery;
 	ymax += jittery;
 
-	viewDef->projectionMatrix[0] = 2 * zNear / width;
-	viewDef->projectionMatrix[4] = 0;
-	viewDef->projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
-	viewDef->projectionMatrix[12] = 0;
+	tr.viewDef->projectionMatrix[0] = 2 * zNear / width;
+	tr.viewDef->projectionMatrix[4] = 0;
+	tr.viewDef->projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
+	tr.viewDef->projectionMatrix[12] = 0;
 
-	viewDef->projectionMatrix[1] = 0;
-	viewDef->projectionMatrix[5] = 2 * zNear / height;
-	viewDef->projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
-	viewDef->projectionMatrix[13] = 0;
+	tr.viewDef->projectionMatrix[1] = 0;
+	tr.viewDef->projectionMatrix[5] = 2 * zNear / height;
+	tr.viewDef->projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
+	tr.viewDef->projectionMatrix[13] = 0;
 
 	// this is the far-plane-at-infinity formulation, and
 	// crunches the Z range slightly so w=0 vertexes do not
 	// rasterize right at the wraparound point
-	viewDef->projectionMatrix[2] = 0;
-	viewDef->projectionMatrix[6] = 0;
-	viewDef->projectionMatrix[10] = -0.999f;
-	viewDef->projectionMatrix[14] = -2.0f * zNear;
+	tr.viewDef->projectionMatrix[2] = 0;
+	tr.viewDef->projectionMatrix[6] = 0;
+#if Z_HACK
+	tr.viewDef->projectionMatrix[10] = (-zFar-zNear)/(zFar-zNear);//-0.999f;
+	tr.viewDef->projectionMatrix[14] = -2.0f*zFar*zNear/(zFar-zNear);
+#else
+	tr.viewDef->projectionMatrix[10] = -0.999f;
+	tr.viewDef->projectionMatrix[14] = -2.0f * zNear;
+#endif
 
-	viewDef->projectionMatrix[3] = 0;
-	viewDef->projectionMatrix[7] = 0;
-	viewDef->projectionMatrix[11] = -1;
-	viewDef->projectionMatrix[15] = 0;
+	tr.viewDef->projectionMatrix[3] = 0;
+	tr.viewDef->projectionMatrix[7] = 0;
+	tr.viewDef->projectionMatrix[11] = -1;
+	tr.viewDef->projectionMatrix[15] = 0;
 }
 
 /*
@@ -964,31 +995,30 @@ Setup that culling frustum planes for the current view
 FIXME: derive from modelview matrix times projection matrix
 =================
 */
-//static
-void R_SetupViewFrustum( viewDef_t* viewDef ) {
+static void R_SetupViewFrustum( void ) {
 	int		i;
 	float	xs, xc;
 	float	ang;
 
-	ang = DEG2RAD( viewDef->renderView.fov_x ) * 0.5f;
+	ang = DEG2RAD( tr.viewDef->renderView.fov_x ) * 0.5f;
 	idMath::SinCos( ang, xs, xc );
 
-	viewDef->frustum[0] = xs * viewDef->renderView.viewaxis[0] + xc * viewDef->renderView.viewaxis[1];
-	viewDef->frustum[1] = xs * viewDef->renderView.viewaxis[0] - xc * viewDef->renderView.viewaxis[1];
+	tr.viewDef->frustum[0] = xs * tr.viewDef->renderView.viewaxis[0] + xc * tr.viewDef->renderView.viewaxis[1];
+	tr.viewDef->frustum[1] = xs * tr.viewDef->renderView.viewaxis[0] - xc * tr.viewDef->renderView.viewaxis[1];
 
-	ang = DEG2RAD( viewDef->renderView.fov_y ) * 0.5f;
+	ang = DEG2RAD( tr.viewDef->renderView.fov_y ) * 0.5f;
 	idMath::SinCos( ang, xs, xc );
 
-	viewDef->frustum[2] = xs * viewDef->renderView.viewaxis[0] + xc * viewDef->renderView.viewaxis[2];
-	viewDef->frustum[3] = xs * viewDef->renderView.viewaxis[0] - xc * viewDef->renderView.viewaxis[2];
+	tr.viewDef->frustum[2] = xs * tr.viewDef->renderView.viewaxis[0] + xc * tr.viewDef->renderView.viewaxis[2];
+	tr.viewDef->frustum[3] = xs * tr.viewDef->renderView.viewaxis[0] - xc * tr.viewDef->renderView.viewaxis[2];
 
 	// plane four is the front clipping plane
-	viewDef->frustum[4] = /* vec3_origin - */ viewDef->renderView.viewaxis[0];
+	tr.viewDef->frustum[4] = /* vec3_origin - */ tr.viewDef->renderView.viewaxis[0];
 
 	for ( i = 0; i < 5; i++ ) {
 		// flip direction so positive side faces out (FIXME: globally unify this)
-		viewDef->frustum[i] = -viewDef->frustum[i].Normal();
-		viewDef->frustum[i][3] = -( viewDef->renderView.vieworg * viewDef->frustum[i].Normal() );
+		tr.viewDef->frustum[i] = -tr.viewDef->frustum[i].Normal();
+		tr.viewDef->frustum[i][3] = -( tr.viewDef->renderView.vieworg * tr.viewDef->frustum[i].Normal() );
 	}
 
 	// eventually, plane five will be the rear clipping plane for fog
@@ -996,16 +1026,16 @@ void R_SetupViewFrustum( viewDef_t* viewDef ) {
 	float dNear, dFar, dLeft, dUp;
 
 	dNear = r_znear.GetFloat();
-	if ( viewDef->renderView.cramZNear ) {
+	if ( tr.viewDef->renderView.cramZNear ) {
 		dNear *= 0.25f;
 	}
 
 	dFar = MAX_WORLD_SIZE;
-	dLeft = dFar * tan( DEG2RAD( viewDef->renderView.fov_x * 0.5f ) );
-	dUp = dFar * tan( DEG2RAD( viewDef->renderView.fov_y * 0.5f ) );
-	viewDef->viewFrustum.SetOrigin( viewDef->renderView.vieworg );
-	viewDef->viewFrustum.SetAxis( viewDef->renderView.viewaxis );
-	viewDef->viewFrustum.SetSize( dNear, dFar, dLeft, dUp );
+	dLeft = dFar * tan( DEG2RAD( tr.viewDef->renderView.fov_x * 0.5f ) );
+	dUp = dFar * tan( DEG2RAD( tr.viewDef->renderView.fov_y * 0.5f ) );
+	tr.viewDef->viewFrustum.SetOrigin( tr.viewDef->renderView.vieworg );
+	tr.viewDef->viewFrustum.SetAxis( tr.viewDef->renderView.viewaxis );
+	tr.viewDef->viewFrustum.SetSize( dNear, dFar, dLeft, dUp );
 }
 
 /*
@@ -1113,11 +1143,11 @@ void R_RenderView( viewDef_t *parms ) {
 
 	// the four sides of the view frustum are needed
 	// for culling and portal visibility
-	R_SetupViewFrustum( tr.viewDef );
+	R_SetupViewFrustum();
 
 	// we need to set the projection matrix before doing
 	// portal-to-screen scissor box calculations
-	R_SetupProjection( tr.viewDef );
+	R_SetupProjection();
 
 	// identify all the visible portalAreas, and the entityDefs and
 	// lightDefs that are in them and pass culling.

@@ -39,6 +39,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "PlayerIcon.h"
 #include "GameEdit.h"
 
+#ifdef AIM_ASSIST
+#include "AimAssist.h"
+#endif
+
 class idAI;
 
 /*
@@ -288,6 +292,9 @@ public:
 	bool					hiddenWeapon;		// if the weapon is hidden ( in noWeapons maps )
 	idEntityPtr<idProjectile> soulCubeProjectile;
 
+#ifdef AIM_ASSIST
+	idAimAssist				aimAssist;
+#endif
 	// mp stuff
 	static idVec3			colorBarTable[ 5 ];
 	int						spectator;
@@ -371,6 +378,9 @@ public:
 	void					UpdateConditions( void );
 	void					SetViewAngles( const idAngles &angles );
 
+#ifdef AIM_ASSIST
+	idAimAssist *			GetAimAssist() { return &aimAssist; }
+#endif
 							// delta view angles to allow movers to rotate the view of the player
 	void					UpdateDeltaViewAngles( const idAngles &angles );
 

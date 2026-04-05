@@ -458,6 +458,10 @@ idActor::idActor( void ) {
 
 	enemyNode.SetOwner( this );
 	enemyList.SetOwner( this );
+#ifdef AIM_ASSIST
+	aimAssistNode.SetOwner( this );
+	aimAssistNode.AddToEnd( gameLocal.aimAssistEntities );
+#endif
 }
 
 /*
@@ -489,7 +493,9 @@ idActor::~idActor( void ) {
 			ent->PostEventMS( &EV_Remove, 0 );
 		}
 	}
-
+#ifdef AIM_ASSIST
+	aimAssistNode.Remove();
+#endif
 	ShutdownThreads();
 }
 

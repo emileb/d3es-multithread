@@ -607,7 +607,7 @@ int idMaterial::ParseTerm( idLexer &src ) {
 		return EXP_REG_GLOBAL7;
 	}
 	if ( !token.Icmp( "fragmentPrograms" ) ) {
-		return GetExpressionConstant( (float) glConfig.ARBFragmentProgramAvailable );
+		return GetExpressionConstant( (float) false );
 	}
 
 	if ( !token.Icmp( "sound" ) ) {
@@ -999,9 +999,7 @@ void idMaterial::ParseFragmentMap( idLexer &src, newShaderStage_t *newStage ) {
 		}
 
 		if ( !token.Icmp( "uncompressed" ) || !token.Icmp( "highquality" ) ) {
-			if ( !globalImages->image_ignoreHighQuality.GetInteger() ) {
-				td = TD_HIGH_QUALITY;
-			}
+			td = TD_HIGH_QUALITY;
 			continue;
 		}
 		if ( !token.Icmp( "nopicmip" ) ) {
@@ -1200,6 +1198,10 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 			}
 			ts->cinematic = idCinematic::Alloc();
 			ts->cinematic->InitFromFile( token.c_str(), loop );
+
+			// Due to multithreading we create an image for each cinematic so they can be updated cleanly
+			ts->image = globalImages->AllocImage("cinematic_temp");
+			ts->image->cinematic = ts->cinematic;
 			continue;
 		}
 
@@ -1256,9 +1258,7 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 			continue;
 		}
 		if ( !token.Icmp( "uncompressed" ) || !token.Icmp( "highquality" ) ) {
-			if ( !globalImages->image_ignoreHighQuality.GetInteger() ) {
-				td = TD_HIGH_QUALITY;
-			}
+			td = TD_HIGH_QUALITY;
 			continue;
 		}
 		if ( !token.Icmp( "forceHighQuality" ) ) {
@@ -1434,10 +1434,6 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 			ss->drawStateBits |= GLS_DEPTHMASK;
 			continue;
 		}
-		if ( !token.Icmp( "ignoreDepth" ) ) { // Added in #3877.
-			ss->drawStateBits |= GLS_DEPTHFUNC_ALWAYS;
-			continue;
-		}
 		if ( !token.Icmp( "alphaTest" ) ) {
 			ss->hasAlphaTest = true;
 			ss->alphaTestRegister = ParseExpression( src );
@@ -1498,20 +1494,20 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 		}
 		if ( !token.Icmp( "program" ) ) {
 			if ( src.ReadTokenOnLine( &token ) ) {
-				newStage.vertexProgram = R_FindARBProgram( GL_VERTEX_PROGRAM_ARB, token.c_str() );
-				newStage.fragmentProgram = R_FindARBProgram( GL_FRAGMENT_PROGRAM_ARB, token.c_str() );
+				newStage.vertexProgram = -1;
+				newStage.fragmentProgram = -1;
 			}
 			continue;
 		}
 		if ( !token.Icmp( "fragmentProgram" ) ) {
 			if ( src.ReadTokenOnLine( &token ) ) {
-				newStage.fragmentProgram = R_FindARBProgram( GL_FRAGMENT_PROGRAM_ARB, token.c_str() );
+				newStage.fragmentProgram = -1;
 			}
 			continue;
 		}
 		if ( !token.Icmp( "vertexProgram" ) ) {
 			if ( src.ReadTokenOnLine( &token ) ) {
-				newStage.vertexProgram = R_FindARBProgram( GL_VERTEX_PROGRAM_ARB, token.c_str() );
+				newStage.vertexProgram = -1;
 			}
 			continue;
 		}
@@ -1523,8 +1519,8 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 					SetMaterialFlag( MF_DEFAULTED );
 					continue;
 				}
-				newStage.vertexProgram = R_FindARBProgram( GL_VERTEX_PROGRAM_ARB, "megaTexture.vfp" );
-				newStage.fragmentProgram = R_FindARBProgram( GL_FRAGMENT_PROGRAM_ARB, "megaTexture.vfp" );
+				newStage.vertexProgram = -1;
+				newStage.fragmentProgram = -1;
 				continue;
 			}
 		}
@@ -2280,6 +2276,29 @@ bool idMaterial::Parse( const char *text, const int textLength ) {
 		}
 	}
 
+#ifdef NO_LIGHT
+	if (r_noLight.GetBool() )
+	{
+		int bumpcnt=0;
+
+		for (i = 0 ; i < numStages ; i++) {
+			if (pd->parseStages[i].lighting == SL_BUMP) {
+				bumpcnt++;
+				break;
+			}
+		}
+
+		if (bumpcnt!=0)
+		for (i = 0 ; i < numStages ; i++) {
+			if (pd->parseStages[i].lighting == SL_DIFFUSE) {
+				pd->parseStages[i].lighting = SL_AMBIENT;
+				pd->parseStages[i].drawStateBits=9000;
+				numAmbientStages++;
+				break;
+			}
+		}
+	}
+#endif
 	// add a tiny offset to the sort orders, so that different materials
 	// that have the same sort value will at least sort consistantly, instead
 	// of flickering back and forth
@@ -2551,10 +2570,7 @@ idMaterial::UpdateCinematic
 =============
 */
 void idMaterial::UpdateCinematic( int time ) const {
-	if ( !stages || !stages[0].texture.cinematic || !backEnd.viewDef ) {
-		return;
-	}
-	stages[0].texture.cinematic->ImageForTime( tr.primaryRenderView.time );
+	// Do not update cinematics from front end, just wait until the back uses it and update form there (fix MT)
 }
 
 /*
@@ -2730,11 +2746,11 @@ void idMaterial::ReloadImages( bool force ) const
 		if ( stages[i].newStage ) {
 			for ( int j = 0 ; j < stages[i].newStage->numFragmentProgramImages ; j++ ) {
 				if ( stages[i].newStage->fragmentProgramImages[j] ) {
-					stages[i].newStage->fragmentProgramImages[j]->Reload( false, force );
+					stages[i].newStage->fragmentProgramImages[j]->Reload( force );
 				}
 			}
 		} else if ( stages[i].texture.image ) {
-			stages[i].texture.image->Reload( false, force );
+			stages[i].texture.image->Reload( force );
 		}
 	}
 }

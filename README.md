@@ -1,3 +1,24 @@
+# D3ES
+
+This repo is an update and clean up of the awesome D3WASM project (https://github.com/gabrielcuvillier/d3wasm) which brought GLES2 rendering to Dhewm3 (https://github.com/dhewm/dhewm3).
+
+As well as keeping up-to-date with the Dhewm3 project it adds:
+
+ - Multithreading
+ - Custom Framebuffer
+
+New options:
+
+**r_multithread** - Enable/disable multithreading.  
+
+**r_useETC1** - Compress texture data with ETC, saves GPU memory but can be very slow to load.
+
+**r_framebufferWidth, r_framebufferHeight** - Set on command line to render to a framebuffer of this size E.g: `+set r_framebufferWidth 320 +set r_framebufferHeight 240`
+
+**r_maxFps** - Limit framerate
+
+
+
 # ABOUT
 
 _dhewm 3_ is a _Doom 3_ GPL source port, known to work on at least Windows, Linux, macOS and FreeBSD.

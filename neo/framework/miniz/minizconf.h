@@ -56,6 +56,10 @@
   #define z_off64_t int64_t
 #endif
 
+#ifdef __ANDROID__
+#define z_off64_t off64_t
+#endif
+
 #if defined(__cplusplus) && __cplusplus >= 201103L
 static_assert( sizeof(z_off64_t) == 8, "z_off64_t should be a 64bit type" );
 #endif

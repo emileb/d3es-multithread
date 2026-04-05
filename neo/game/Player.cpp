@@ -1404,6 +1404,10 @@ void idPlayer::Init( void ) {
 	MPAimFadeTime		= 0;
 	MPAimHighlight		= false;
 
+#ifdef AIM_ASSIST
+	aimAssist.Init( this );
+#endif
+
 	if ( hud ) {
 		hud->HandleNamedEvent( "aim_clear" );
 	}
@@ -2063,6 +2067,10 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 	savefile->ReadBool( leader );
 	savefile->ReadInt( lastSpectateChange );
 	savefile->ReadInt( lastTeleFX );
+
+#ifdef AIM_ASSIST
+	aimAssist.Init( this );
+#endif
 
 	// set the pm_ cvars
 	const idKeyValue	*kv;
@@ -6208,6 +6216,10 @@ Called every tic for each player
 */
 void idPlayer::Think( void ) {
 	renderEntity_t *headRenderEnt;
+
+#ifdef AIM_ASSIST
+	aimAssist.Update();
+#endif
 
 	UpdatePlayerIcons();
 

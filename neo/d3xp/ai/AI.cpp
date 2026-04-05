@@ -3487,11 +3487,12 @@ void idAI::Killed( idEntity *inflictor, idEntity *attacker, int damage, const id
 		kv = spawnArgs.MatchPrefix( "def_drops", kv );
 	}
 
-#ifndef _D3XP
-	if ( ( attacker && attacker->IsType( idPlayer::Type ) ) && ( inflictor && !inflictor->IsType( idSoulCubeMissile::Type ) ) ) {
-		static_cast< idPlayer* >( attacker )->AddAIKill();
-	}
-#endif
+    if( gameMod == GAME_TYPE_DOOM3_LE ) {
+        if ((attacker && attacker->IsType(idPlayer::Type)) &&
+            (inflictor && !inflictor->IsType(idSoulCubeMissile::Type))) {
+            static_cast< idPlayer * >( attacker )->AddAIKill();
+        }
+    }
 
 #ifdef _D3XP
 	if(spawnArgs.GetBool("harvest_on_death")) {
