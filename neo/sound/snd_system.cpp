@@ -129,9 +129,6 @@ static void SetAlcAttrList( ALCint attrList[D3_ALC_ATTRLIST_LEN] )
 }
 #endif
 
-#ifdef __ANDROID__
-extern "C" void OpenSL_android_set_pause( ALCdevice *Device, int pause );
-#endif
 
 /*
 ===============
@@ -700,8 +697,12 @@ bool idSoundSystemLocal::ResetALDevice()
 #ifdef __ANDROID__
 void idSoundSystemLocal::Pause( bool pause )
 {
-	if( openalDevice )
-		OpenSL_android_set_pause( openalDevice, pause );
+	if( openalDevice ) {
+		if( pause )
+			alcDevicePauseSOFT( openalDevice );
+		else
+			alcDeviceResumeSOFT( openalDevice );
+	}
 }
 #endif
 
