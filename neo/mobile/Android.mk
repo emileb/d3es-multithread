@@ -11,7 +11,7 @@ $(TOP_DIR) \
 $(TOP_DIR)/Doom/d3es/neo/mobile \
 $(TOP_DIR)/Doom/d3es_2025/neo/libs/imgui \
 $(SDL_INCLUDE_PATHS) \
-$(TOP_DIR)/AudioLibs_OpenTouch/openal/include/ \
+$(TOP_DIR)/AudioLibs_OpenTouch/openal-soft/src/main/jni/openal/include  \
 $(TOP_DIR)/AudioLibs_OpenTouch/liboggvorbis/include \
 $(TOP_DIR)/MobileTouchControls \
 $(TOP_DIR)/Clibs_OpenTouch \
@@ -36,7 +36,7 @@ LOCAL_CPPFLAGS += -DD3ES -DENGINE_NAME=\"d3es\"
 LOCAL_CPPFLAGS += -DNO_LIGHT
 
 # Not avaliable in Android until N
-LOCAL_CFLAGS := -DIOAPI_NO_64
+LOCAL_CFLAGS := -DIOAPI_NO_64 -DAL_ALEXT_PROTOTYPES
 
 SRC_ANDROID = mobile/game_interface.cpp \
               ../../../Clibs_OpenTouch/idtech1/android_jni.cpp \
