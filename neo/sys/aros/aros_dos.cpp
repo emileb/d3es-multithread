@@ -170,7 +170,11 @@ int Sys_ListFiles( const char *directory, const char *extension, idStrList &list
 Sys_Mkdir
 ================
 */
+// defined in FileSystem.cpp -- a new directory can invalidate cached lookups
+void FS_InvalidateOSDirectoryCache( void );
+
 void Sys_Mkdir( const char *path ) {
+	FS_InvalidateOSDirectoryCache();
     BPTR dirlock;
 
     D( bug( "[ADoom3] %s('%s')\n", __func__, path ) );

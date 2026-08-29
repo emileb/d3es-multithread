@@ -28,6 +28,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifdef WIN32
 	#include <io.h>	// for _read
+	#include <sys/stat.h>	// for _stat, used by the OS directory cache
 #else
 	#include <sys/types.h>
 	#include <sys/stat.h>
@@ -578,6 +579,110 @@ bool idFileSystemLocal::FilenameCompare( const char *s1, const char *s2 ) const 
 
 /*
 ================
+OS directory existence cache
+
+Case recovery below is only reachable when fopen() has already failed, and by
+far the most common reason for that is an asset that lives in a pk4 rather than
+loose on disk. Every search path is tried for every such file, so the engine
+asks "does <searchpath>/<gamedir>/models/... exist" thousands of times a load.
+ListOSFiles never caches a miss (it bails on -1), so each of those asks costs a
+fresh opendir that was always going to fail.
+
+Caching the answer per directory turns the second and subsequent asks into a
+hash lookup. Ancestors count too: once a directory is known to be absent,
+nothing beneath it can exist, so a whole subtree costs one stat.
+
+This only ever suppresses work that could not have succeeded. Where a directory
+does exist the recovery runs exactly as before, so mods with mismatched
+filename case keep working.
+================
+*/
+static const int MAX_CACHED_OS_DIRECTORIES = 4096;
+
+class idOSDirectoryCache {
+public:
+					idOSDirectoryCache() { hash.Clear( 1024, 1024 ); }
+
+	bool			Exists( const char *directory );
+	void			Invalidate() { hash.Clear( 1024, 1024 ); paths.Clear(); present.Clear(); }
+
+private:
+	int				Find( const char *directory ) const;
+	static bool		StatDirectory( const char *directory );
+
+	idHashIndex		hash;
+	idStrList		paths;
+	idList<bool>	present;
+};
+
+int idOSDirectoryCache::Find( const char *directory ) const {
+	const int key = hash.GenerateKey( directory, false );
+	for ( int i = hash.First( key ); i != -1; i = hash.Next( i ) ) {
+		if ( paths[i].Icmp( directory ) == 0 ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+bool idOSDirectoryCache::StatDirectory( const char *directory ) {
+#ifdef WIN32
+	struct _stat st;
+	if ( _stat( directory, &st ) != 0 ) {
+		return false;
+	}
+	return ( st.st_mode & _S_IFDIR ) != 0;
+#else
+	struct stat st;
+	if ( stat( directory, &st ) != 0 ) {
+		return false;
+	}
+	return S_ISDIR( st.st_mode );
+#endif
+}
+
+bool idOSDirectoryCache::Exists( const char *directory ) {
+	if ( directory == NULL || directory[0] == '\0' ) {
+		return false;
+	}
+
+	int index = Find( directory );
+	if ( index != -1 ) {
+		return present[index];
+	}
+
+	// Walk up before touching the disk: a cached "missing" ancestor settles
+	// this without a syscall, which is what makes a deep asset tree cheap.
+	idStr parent = directory;
+	parent.StripFilename();
+	bool exists;
+	if ( parent.Length() > 1 && parent.Icmp( directory ) != 0 && !Exists( parent.c_str() ) ) {
+		exists = false;
+	} else {
+		exists = StatDirectory( directory );
+	}
+
+	// A load touches a bounded set of directories, but a long session browsing
+	// many maps should not grow this without limit.
+	if ( paths.Num() >= MAX_CACHED_OS_DIRECTORIES ) {
+		Invalidate();
+	}
+
+	index = paths.Append( idStr( directory ) );
+	present.Append( exists );
+	hash.Add( hash.GenerateKey( directory, false ), index );
+
+	return exists;
+}
+
+static idOSDirectoryCache osDirectoryCache;
+
+void FS_InvalidateOSDirectoryCache( void ) {
+	osDirectoryCache.Invalidate();
+}
+
+/*
+================
 idFileSystemLocal::OpenOSFile
 optional caseSensitiveName is set to case sensitive file name as found on disc (fs_caseSensitiveOS only)
 ================
@@ -588,18 +693,32 @@ FILE *idFileSystemLocal::OpenOSFile( const char *fileName, const char *mode, idS
 	idStr fpath, entry;
 	idStrList list;
 
+	fp = fopen( fileName, mode );
 #ifndef WIN32
-	// some systems will let you fopen a directory
-	struct stat buf;
-	if ( stat( fileName, &buf ) != -1 && !S_ISREG(buf.st_mode) ) {
-		return NULL;
+	// Some systems will let you fopen a directory. Test the handle we got back
+	// rather than stat()ing the name first: the overwhelmingly common outcome
+	// here is a probe for a pk4-resident asset that opens nothing at all, and
+	// an up-front stat spent a syscall on every one of those.
+	if ( fp ) {
+		struct stat buf;
+		if ( fstat( fileno( fp ), &buf ) != -1 && !S_ISREG( buf.st_mode ) ) {
+			fclose( fp );
+			return NULL;
+		}
 	}
 #endif
-	fp = fopen( fileName, mode );
 	if ( !fp && fs_caseSensitiveOS.GetBool() ) {
 		fpath = fileName;
 		fpath.StripFilename();
 		fpath.StripTrailing( PATHSEPERATOR_CHAR );
+
+		// Nothing can be recovered out of a directory that is not there, and
+		// probes for pk4-resident assets name directories that do not exist on
+		// disk at all. Answering those from the cache skips the enumeration.
+		if ( fpath.Length() > 1 && !osDirectoryCache.Exists( fpath.c_str() ) ) {
+			return NULL;
+		}
+
 		if ( ListOSFiles( fpath, NULL, list ) == -1 ) {
 			return NULL;
 		}
@@ -690,6 +809,9 @@ void idFileSystemLocal::CreateOSPath( const char *OSPath ) {
 			*ofs = PATHSEPERATOR_CHAR;
 		}
 	}
+
+	// directories just appeared where the cache may have recorded none
+	FS_InvalidateOSDirectoryCache();
 }
 
 /*
