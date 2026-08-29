@@ -34,6 +34,39 @@ shaderProgram_t skyboxCubeShader;
 shaderProgram_t reflectionCubeShader;
 shaderProgram_t stencilShadowShader;
 
+// GLSL stand-ins for the ARB programs a material can name, indexed by newStageProgram_t
+shaderProgram_t newStageShaders[NEWSTAGE_COUNT];
+
+static const struct {
+	const char* const name;
+	const char* const vp;
+	const char* const fp;
+} newStageShaderDefs[NEWSTAGE_COUNT] = {
+	{ "heatHaze",                  heatHazeShaderVP,                  heatHazeShaderFP },
+	{ "heatHazeWithMask",          heatHazeWithMaskShaderVP,          heatHazeWithMaskShaderFP },
+	{ "heatHazeWithMaskAndVertex", heatHazeWithMaskAndVertexShaderVP, heatHazeWithMaskAndVertexShaderFP },
+	{ "colorProcess",              colorProcessShaderVP,              colorProcessShaderFP },
+	{ "enviroSuit",                enviroSuitShaderVP,                enviroSuitShaderFP },
+	{ "environment",               environmentShaderVP,               environmentShaderFP },
+	{ "bumpyEnvironment",          bumpyEnvironmentShaderVP,          bumpyEnvironmentShaderFP },
+};
+
+/*
+====================
+R_FindGLSLNewStageProgram
+
+'name' is the program a material asked for, without its extension
+====================
+*/
+int R_FindGLSLNewStageProgram(const char* name) {
+	for ( int i = 0; i < NEWSTAGE_COUNT; i++ ) {
+		if ( !idStr::Icmp(name, newStageShaderDefs[i].name)) {
+			return i;
+		}
+	}
+	return NEWSTAGE_NONE;
+}
+
 #define ATTR_VERTEX     0   // Don't change this, as WebGL require the vertex attrib 0 to be always bound
 #define ATTR_COLOR      1
 #define ATTR_TEXCOORD   2
@@ -259,6 +292,10 @@ static void RB_GLSL_GetUniformLocations(shaderProgram_t* shader) {
 	shader->specularExponent = qglGetUniformLocation(shader->program, "u_specularExponent");
 	shader->modelViewProjectionMatrix = qglGetUniformLocation(shader->program, "u_modelViewProjectionMatrix");
 	shader->modelViewMatrix = qglGetUniformLocation(shader->program, "u_modelViewMatrix");
+	shader->projectionMatrix = qglGetUniformLocation(shader->program, "u_projectionMatrix");
+	shader->modelMatrix = qglGetUniformLocation(shader->program, "u_modelMatrix");
+	shader->nonPowerOfTwo = qglGetUniformLocation(shader->program, "u_nonPowerOfTwo");
+	shader->windowCoords = qglGetUniformLocation(shader->program, "u_windowCoords");
 	shader->textureMatrix = qglGetUniformLocation(shader->program, "u_textureMatrix");
 	shader->clipPlane = qglGetUniformLocation(shader->program, "u_clipPlane");
 	shader->fogMatrix = qglGetUniformLocation(shader->program, "u_fogMatrix");
@@ -269,6 +306,11 @@ static void RB_GLSL_GetUniformLocations(shaderProgram_t* shader) {
 	shader->attr_Normal = qglGetAttribLocation(shader->program, "attr_Normal");
 	shader->attr_Vertex = qglGetAttribLocation(shader->program, "attr_Vertex");
 	shader->attr_Color = qglGetAttribLocation(shader->program, "attr_Color");
+
+	for ( i = 0; i < MAX_VERTEX_PARMS; i++ ) {
+		idStr::snPrintf(buffer, sizeof(buffer), "u_vertexParm%d", i);
+		shader->u_vertexParm[i] = qglGetUniformLocation(shader->program, buffer);
+	}
 
 	// Init default values
 	for ( i = 0; i < MAX_FRAGMENT_IMAGES; i++ ) {
@@ -460,7 +502,56 @@ static bool RB_GLSL_InitShaders(void) {
 		RB_GLSL_GetUniformLocations(&stencilShadowShader);
 	}
 
+	// New shader stage shaders
+	for ( int i = 0; i < NEWSTAGE_COUNT; i++ ) {
+		common->Printf("Loading %s shader\n", newStageShaderDefs[i].name);
+		memset(&newStageShaders[i], 0, sizeof(shaderProgram_t));
+
+		R_LoadGLSLShader(newStageShaderDefs[i].vp, &newStageShaders[i], GL_VERTEX_SHADER);
+		R_LoadGLSLShader(newStageShaderDefs[i].fp, &newStageShaders[i], GL_FRAGMENT_SHADER);
+
+		if ( !R_LinkGLSLShader(&newStageShaders[i], newStageShaderDefs[i].name) &&
+		        !R_ValidateGLSLProgram(&newStageShaders[i])) {
+			return false;
+		} else {
+			RB_GLSL_GetUniformLocations(&newStageShaders[i]);
+		}
+	}
+
 	return true;
+}
+
+/*
+=================
+RB_GLSL_SetProgramEnvironment
+
+Screen space parameters the new shader stages need to sample _currentRender
+=================
+*/
+static void RB_GLSL_SetProgramEnvironment(void) {
+	float parm[4];
+
+	// screen power of two correction factor, assuming the copy to _currentRender
+	// also copied an extra row and column for the bilerp
+	const int w = backEnd.viewDef->viewport.x2 - backEnd.viewDef->viewport.x1 + 1;
+	const int h = backEnd.viewDef->viewport.y2 - backEnd.viewDef->viewport.y1 + 1;
+
+	// uploadWidth/Height are only known once _currentRender has been copied into
+	const int potW = Max(globalImages->currentRenderImage->uploadWidth, w);
+	const int potH = Max(globalImages->currentRenderImage->uploadHeight, h);
+
+	parm[0] = (float) w / (float) potW;
+	parm[1] = (float) h / (float) potH;
+	parm[2] = 0.0f;
+	parm[3] = 1.0f;
+	GL_Uniform4fv(offsetof(shaderProgram_t, nonPowerOfTwo), parm);
+
+	// window coord to 0.0 to 1.0 conversion
+	parm[0] = 1.0f / (float) w;
+	parm[1] = 1.0f / (float) h;
+	parm[2] = 0.0f;
+	parm[3] = 1.0f;
+	GL_Uniform4fv(offsetof(shaderProgram_t, windowCoords), parm);
 }
 
 /*
@@ -1776,7 +1867,135 @@ void RB_GLSL_T_RenderShaderPasses(const drawSurf_t* surf, const float mvp[16]) {
 		const newShaderStage_t* const newStage = pStage->newStage;
 
 		if ( newStage ) {
-			// new style stages: Not implemented in GLSL yet!
+
+			//////////////////////////////////////////
+			// New style stages (ARB program in D3)
+			//////////////////////////////////////////
+
+			// NEWSTAGE_NONE means we have no GLSL replacement for the program the
+			// material asked for, so there is nothing sensible we could draw
+			if ( r_skipNewAmbient.GetBool() || newStage->glslProgram == NEWSTAGE_NONE ) {
+				continue;
+			}
+
+			GL_UseProgram(&newStageShaders[newStage->glslProgram]);
+
+			// only the environment shaders need a full tangent space
+			const bool bNeedsTangentSpace = ( newStage->glslProgram == NEWSTAGE_ENVIRONMENT ||
+			                                  newStage->glslProgram == NEWSTAGE_BUMPY_ENVIRONMENT );
+
+			// Vertex attributes
+			GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Vertex), 3, GL_FLOAT, false, sizeof(idDrawVert),
+			                       ac->xyz.ToFloatPtr());
+			GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_TexCoord), 2, GL_FLOAT, false, sizeof(idDrawVert),
+			                       ac->st.ToFloatPtr());
+			GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Color), 4, GL_UNSIGNED_BYTE, false, sizeof(idDrawVert),
+			                       (void*) &ac->color);
+
+			if ( bNeedsTangentSpace ) {
+				GL_EnableVertexAttribArray(ATTR_NORMAL);
+				GL_EnableVertexAttribArray(ATTR_TANGENT);
+				GL_EnableVertexAttribArray(ATTR_BITANGENT);
+				GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Normal), 3, GL_FLOAT, false, sizeof(idDrawVert),
+				                       ac->normal.ToFloatPtr());
+				GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Tangent), 3, GL_FLOAT, false, sizeof(idDrawVert),
+				                       ac->tangents[0].ToFloatPtr());
+				GL_VertexAttribPointer(offsetof(shaderProgram_t, attr_Bitangent), 3, GL_FLOAT, false, sizeof(idDrawVert),
+				                       ac->tangents[1].ToFloatPtr());
+			}
+
+			// Standard transformations. The ported ARB programs index the projection and
+			// modelview matrices by row, so those two go up transposed.
+			GL_UniformMatrix4fv(offsetof(shaderProgram_t, modelViewProjectionMatrix), mvp);
+
+			float transposed[16];
+			R_TransposeGLMatrix(backEnd.viewDef->projectionMatrix, transposed);
+			GL_UniformMatrix4fv(offsetof(shaderProgram_t, projectionMatrix), transposed);
+			R_TransposeGLMatrix(surf->space->modelViewMatrix, transposed);
+			GL_UniformMatrix4fv(offsetof(shaderProgram_t, modelViewMatrix), transposed);
+			R_TransposeGLMatrix(surf->space->modelMatrix, transposed);
+			GL_UniformMatrix4fv(offsetof(shaderProgram_t, modelMatrix), transposed);
+
+			GL_Uniform4fv(offsetof(shaderProgram_t, localViewOrigin), localViewOrigin.ToFloatPtr());
+
+			// _currentRender sampling parameters
+			RB_GLSL_SetProgramEnvironment();
+
+			if ( bNeedsTangentSpace ) {
+				const float envColor[4] = {
+					regs[pStage->color.registers[0]],
+					regs[pStage->color.registers[1]],
+					regs[pStage->color.registers[2]],
+					regs[pStage->color.registers[3]]
+				};
+				GL_Uniform4fv(offsetof(shaderProgram_t, glColor), envColor);
+
+				switch ( pStage->vertexColor ) {
+				case SVC_MODULATE: {
+					GL_Uniform1fv(offsetof(shaderProgram_t, colorModulate), oneScaled);
+					GL_Uniform1fv(offsetof(shaderProgram_t, colorAdd), zero);
+					break;
+				}
+				case SVC_INVERSE_MODULATE: {
+					GL_Uniform1fv(offsetof(shaderProgram_t, colorModulate), negOneScaled);
+					GL_Uniform1fv(offsetof(shaderProgram_t, colorAdd), one);
+					break;
+				}
+				default:
+				case SVC_IGNORE:
+					break;
+				}
+			}
+
+			// local parameters specified in the material definition
+			for ( int i = 0; i < newStage->numVertexParms; i++ ) {
+				const float parm[4] = {
+					regs[newStage->vertexParms[i][0]],
+					regs[newStage->vertexParms[i][1]],
+					regs[newStage->vertexParms[i][2]],
+					regs[newStage->vertexParms[i][3]]
+				};
+				GL_Uniform4fv(offsetof(shaderProgram_t, u_vertexParm) + i * sizeof(GLint), parm);
+			}
+
+			// bind the fragment program images to their texture units
+			for ( int i = 0; i < newStage->numFragmentProgramImages; i++ ) {
+				if ( newStage->fragmentProgramImages[i] ) {
+					GL_SelectTexture(i);
+					newStage->fragmentProgramImages[i]->Bind();
+				}
+			}
+
+			GL_State(pStage->drawStateBits);
+
+			/////////////////////
+			// Draw the surface!
+			/////////////////////
+			RB_DrawElementsWithCounters(surf);
+
+			/////////////////////////////////////////////
+			// Restore everything to an acceptable state
+			/////////////////////////////////////////////
+
+			for ( int i = newStage->numFragmentProgramImages - 1; i >= 0; i-- ) {
+				if ( newStage->fragmentProgramImages[i] ) {
+					GL_SelectTexture(i);
+					globalImages->BindNull();
+				}
+			}
+			GL_SelectTexture(0);
+
+			if ( bNeedsTangentSpace ) {
+				GL_DisableVertexAttribArray(ATTR_NORMAL);
+				GL_DisableVertexAttribArray(ATTR_TANGENT);
+				GL_DisableVertexAttribArray(ATTR_BITANGENT);
+
+				if ( pStage->vertexColor != SVC_IGNORE ) {
+					GL_Uniform1fv(offsetof(shaderProgram_t, colorModulate), zero);
+					GL_Uniform1fv(offsetof(shaderProgram_t, colorAdd), one);
+				}
+			}
+
 			continue;
 		} else {
 
@@ -2084,12 +2303,12 @@ int RB_GLSL_DrawShaderPasses(drawSurf_t** drawSurfs, int numDrawSurfs) {
 		}
 
 		// only dump if in a 3d view
-		if ( backEnd.viewDef->viewEntitys ) {
-			//globalImages->currentRenderImage->CopyFramebuffer(backEnd.viewDef->viewport.x1,
-			//                                                  backEnd.viewDef->viewport.y1,
-			//                                                  backEnd.viewDef->viewport.x2 - backEnd.viewDef->viewport.x1 + 1,
-			//                                                  backEnd.viewDef->viewport.y2 - backEnd.viewDef->viewport.y1 + 1,
-			//                                                  true);
+		if ( backEnd.viewDef->viewEntitys && !r_skipCopyTexture.GetBool()) {
+			globalImages->currentRenderImage->CopyFramebuffer(backEnd.viewDef->viewport.x1,
+			                                                  backEnd.viewDef->viewport.y1,
+			                                                  backEnd.viewDef->viewport.x2 - backEnd.viewDef->viewport.x1 + 1,
+			                                                  backEnd.viewDef->viewport.y2 - backEnd.viewDef->viewport.y1 + 1,
+			                                                  true);
 		}
 
 		backEnd.currentRenderCopied = true;

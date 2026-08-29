@@ -201,6 +201,8 @@ typedef struct {
 	int					numFragmentProgramImages;
 	idImage *			fragmentProgramImages[MAX_FRAGMENT_IMAGES];
 
+	int					glslProgram;		// newStageProgram_t, NEWSTAGE_NONE if unsupported
+
 	idMegaTexture		*megaTexture;		// handles all the binding and parameter setting
 } newShaderStage_t;
 
@@ -598,6 +600,7 @@ private:
 	bool				MatchToken( idLexer &src, const char *match );
 	void				ParseSort( idLexer &src );
 	void				ParseBlend( idLexer &src, shaderStage_t *stage );
+	void				ParseGLSLProgram( const idToken &token, newShaderStage_t *newStage );
 	void				ParseVertexParm( idLexer &src, newShaderStage_t *newStage );
 	void				ParseFragmentMap( idLexer &src, newShaderStage_t *newStage );
 	void				ParseStage( idLexer &src, const textureRepeat_t trpDefault = TR_REPEAT );

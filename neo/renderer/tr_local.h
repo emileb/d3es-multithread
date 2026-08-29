@@ -1275,6 +1275,8 @@ typedef struct shaderProgram_s {
 
 	GLint		modelViewProjectionMatrix;
 	GLint		modelViewMatrix;
+	GLint		projectionMatrix;
+	GLint		modelMatrix;
 	GLint		textureMatrix;
 	GLint		localLightOrigin;
 	GLint		localViewOrigin;
@@ -1298,6 +1300,11 @@ typedef struct shaderProgram_s {
 
 	GLint		clipPlane;
 
+	// new shader stages
+	GLint		nonPowerOfTwo;
+	GLint		windowCoords;
+	GLint		u_vertexParm[MAX_VERTEX_PARMS];
+
 	/* gl_... */
 	GLint		attr_TexCoord;
 	GLint		attr_Tangent;
@@ -1309,6 +1316,23 @@ typedef struct shaderProgram_s {
 	GLint		u_fragmentMap[MAX_FRAGMENT_IMAGES];
 	GLint		u_fragmentCubeMap[MAX_FRAGMENT_IMAGES];
 } shaderProgram_t;
+
+// GLSL replacements for the ARB programs a material can reference through
+// "program" / "vertexProgram" / "fragmentProgram" (aka new shader stages)
+typedef enum {
+	NEWSTAGE_NONE = -1,
+	NEWSTAGE_HEATHAZE,
+	NEWSTAGE_HEATHAZE_WITH_MASK,
+	NEWSTAGE_HEATHAZE_WITH_MASK_AND_VERTEX,
+	NEWSTAGE_COLORPROCESS,
+	NEWSTAGE_ENVIROSUIT,
+	NEWSTAGE_ENVIRONMENT,
+	NEWSTAGE_BUMPY_ENVIRONMENT,
+	NEWSTAGE_COUNT
+} newStageProgram_t;
+
+// name is the .vfp file the material asked for; returns NEWSTAGE_NONE if unsupported
+int R_FindGLSLNewStageProgram(const char *name);
 
 void R_ReloadGLSLPrograms_f(const idCmdArgs &args);
 

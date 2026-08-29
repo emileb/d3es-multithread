@@ -48,5 +48,20 @@ extern const char* const cubeMapShaderFP;
 // Shadows
 extern const char* const stencilShadowShaderVP;
 extern const char* const stencilShadowShaderFP;
+// New shader stages (materials referencing an ARB program by name)
+extern const char* const heatHazeShaderVP;
+extern const char* const heatHazeShaderFP;
+extern const char* const heatHazeWithMaskShaderVP;
+extern const char* const heatHazeWithMaskShaderFP;
+extern const char* const heatHazeWithMaskAndVertexShaderVP;
+extern const char* const heatHazeWithMaskAndVertexShaderFP;
+extern const char* const colorProcessShaderVP;
+extern const char* const colorProcessShaderFP;
+extern const char* const enviroSuitShaderVP;
+extern const char* const enviroSuitShaderFP;
+extern const char* const environmentShaderVP;
+extern const char* const environmentShaderFP;
+extern const char* const bumpyEnvironmentShaderVP;
+extern const char* const bumpyEnvironmentShaderFP;
 
 #endif //D3WASM_GLSL_SHADERS_H
