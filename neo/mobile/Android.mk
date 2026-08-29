@@ -297,6 +297,7 @@ src_renderer_glsl = \
     renderer/glsl/interactionPhongShaderVP.cpp \
     renderer/glsl/interactionShaderFP.cpp \
     renderer/glsl/interactionShaderVP.cpp \
+    renderer/glsl/newStageShaders.cpp \
     renderer/glsl/reflectionCubeShaderVP.cpp \
     renderer/glsl/skyboxCubeShaderVP.cpp \
     renderer/glsl/stencilShadowShaderFP.cpp \

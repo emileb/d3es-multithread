@@ -869,6 +869,25 @@ void idMaterial::ParseBlend( idLexer &src, shaderStage_t *stage ) {
 
 /*
 ================
+idMaterial::ParseGLSLProgram
+
+The GLES renderer has no ARB program support, so map the requested .vfp onto one
+of the built-in GLSL replacements. An unsupported program leaves the stage at
+NEWSTAGE_NONE and it simply won't be drawn.
+================
+*/
+void idMaterial::ParseGLSLProgram( const idToken &token, newShaderStage_t *newStage ) {
+	idStr name = token.c_str();
+	name.StripFileExtension();
+
+	const int prog = R_FindGLSLNewStageProgram( name.c_str() );
+	if ( prog != NEWSTAGE_NONE ) {
+		newStage->glslProgram = prog;
+	}
+}
+
+/*
+================
 idMaterial::ParseVertexParm
 
 If there is a single value, it will be repeated across all elements
@@ -1108,6 +1127,7 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 	imageName[0] = 0;
 
 	memset( &newStage, 0, sizeof( newStage ) );
+	newStage.glslProgram = NEWSTAGE_NONE;
 
 	ss = &pd->parseStages[numStages];
 	ts = &ss->texture;
@@ -1496,18 +1516,21 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 			if ( src.ReadTokenOnLine( &token ) ) {
 				newStage.vertexProgram = -1;
 				newStage.fragmentProgram = -1;
+				ParseGLSLProgram( token, &newStage );
 			}
 			continue;
 		}
 		if ( !token.Icmp( "fragmentProgram" ) ) {
 			if ( src.ReadTokenOnLine( &token ) ) {
 				newStage.fragmentProgram = -1;
+				ParseGLSLProgram( token, &newStage );
 			}
 			continue;
 		}
 		if ( !token.Icmp( "vertexProgram" ) ) {
 			if ( src.ReadTokenOnLine( &token ) ) {
 				newStage.vertexProgram = -1;
+				ParseGLSLProgram( token, &newStage );
 			}
 			continue;
 		}
